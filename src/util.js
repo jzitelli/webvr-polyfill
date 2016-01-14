@@ -26,8 +26,8 @@ Util.isIOS = function() {
 };
 
 Util.isFirefoxAndroid = function() {
-  return navigator.userAgent.indexOf('Firefox') !== -1 && navigator.userAgent.indexOf('Android') !== -1;
-}
+  return /firefox/i.test(navigator.userAgent) && /android/i.test(navigator.userAgent);
+};
 
 // Helper method to validate the time steps of sensor timestamps.
 Util.isTimestampDeltaValid = function(timestampDeltaS) {
@@ -41,6 +41,6 @@ Util.isTimestampDeltaValid = function(timestampDeltaS) {
     return false;
   }
   return true;
-}
+};
 
 module.exports = Util;

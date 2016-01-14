@@ -114,18 +114,20 @@ FusionPositionSensorVRDevice.prototype.onDeviceMotionChange_ = function(deviceMo
   var rotRate = deviceMotion.rotationRate;
   var timestampS = deviceMotion.timeStamp / 1000;
 
-  // Firefox Android timeStamp returns one thousandth of a millisecond.
+  // Firefox Android timeStamp returns seconds.
   if (this.isFirefoxAndroid) {
     timestampS /= 1000;
   }
 
   var deltaS = timestampS - this.previousTimestampS;
+  this.previousTimestampS = timestampS;
+
   if (deltaS <= Util.MIN_TIMESTEP || deltaS > Util.MAX_TIMESTEP) {
     console.warn('Invalid timestamps detected. Time step between successive ' +
-                 'gyroscope sensor samples is very small or not monotonic');
-    this.previousTimestampS = timestampS;
+                 'gyroscope sensor samples is very small or not monotonic: ' + deltaS);
     return;
   }
+
   this.accelerometer.set(-accGravity.x, -accGravity.y, -accGravity.z);
   this.gyroscope.set(rotRate.alpha, rotRate.beta, rotRate.gamma);
 
@@ -137,8 +139,6 @@ FusionPositionSensorVRDevice.prototype.onDeviceMotionChange_ = function(deviceMo
 
   this.filter.addAccelMeasurement(this.accelerometer, timestampS);
   this.filter.addGyroMeasurement(this.gyroscope, timestampS);
-
-  this.previousTimestampS = timestampS;
 };
 
 FusionPositionSensorVRDevice.prototype.onScreenOrientationChange_ =

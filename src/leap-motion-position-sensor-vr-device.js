@@ -28,6 +28,9 @@ function LeapMotionPositionSensorVRDevice(host, port) {
     leapConfig.port = port;
   }
   this.leapController = new Leap.Controller(leapConfig);
+  this.leapController.on('connect', function () {
+    console.log('LeapMotionPositionSensorVRDevice: connected to Leap Motion controller');
+  });
 }
 LeapMotionPositionSensorVRDevice.prototype = new PositionSensorVRDevice();
 

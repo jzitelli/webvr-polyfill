@@ -359,7 +359,7 @@ ComplementaryFilter.prototype.gyroToQuaternionDelta_ = function(gyro, dt) {
 
 module.exports = ComplementaryFilter;
 
-},{"./sensor-sample.js":8,"./three-math.js":9,"./util.js":11}],4:[function(_dereq_,module,exports){
+},{"./sensor-sample.js":9,"./three-math.js":10,"./util.js":12}],4:[function(_dereq_,module,exports){
 /*
  * Copyright 2015 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -528,7 +528,73 @@ FusionPositionSensorVRDevice.prototype.setScreenTransform_ = function() {
 
 module.exports = FusionPositionSensorVRDevice;
 
-},{"./base.js":1,"./complementary-filter.js":3,"./pose-predictor.js":7,"./three-math.js":9,"./touch-panner.js":10,"./util.js":11}],5:[function(_dereq_,module,exports){
+},{"./base.js":1,"./complementary-filter.js":3,"./pose-predictor.js":8,"./three-math.js":10,"./touch-panner.js":11,"./util.js":12}],5:[function(_dereq_,module,exports){
+var PositionSensorVRDevice = _dereq_('./base.js').PositionSensorVRDevice;
+var TouchPanner = _dereq_('./touch-panner.js');
+var THREE = _dereq_('./three-math.js');
+var Util = _dereq_('./util.js');
+
+/**
+ * Leap Motion position / orientation sensor (uses Leap Motion tool tracking functionality)
+ */
+function LeapMotionPositionSensorVRDevice(host, port) {
+  this.deviceId = 'webvr-polyfill:leapmotion';
+  this.deviceName = 'VR Position Device (webvr-polyfill:leapmotion)';
+
+  // Keep track of a reset transform for resetSensor.
+  this.resetQ = new THREE.Quaternion();
+
+  this.orientation = new THREE.Quaternion();
+  this.position = new THREE.Vector3();
+
+  // Leap Motion input
+  var leapConfig = {
+    background: true /* ,
+    frameEventName: 'animationFrame' */
+  };
+  if (host) {
+    leapConfig.host = host;
+  }
+  if (port) {
+    leapConfig.port = port;
+  }
+  this.leapController = new Leap.Controller(leapConfig);
+  this.leapController.on('connect', function () {
+    console.log('LeapMotionPositionSensorVRDevice: connected to Leap Motion controller');
+  });
+}
+LeapMotionPositionSensorVRDevice.prototype = new PositionSensorVRDevice();
+
+/**
+ * Returns {orientation: {x,y,z,w}, position: {x,y,z}}.
+ */
+LeapMotionPositionSensorVRDevice.prototype.getState = function() {
+  // Update if new Leap Motion frame is available.
+
+
+  return {
+    hasOrientation: true,
+    orientation: this.getOrientation(),
+    hasPosition: true,
+    position: this.getPosition()
+  };
+};
+
+LeapMotionPositionSensorVRDevice.prototype.getOrientation = function() {
+  return this.orientation;
+};
+
+LeapMotionPositionSensorVRDevice.prototype.getPosition = function() {
+  return this.position;
+};
+
+LeapMotionPositionSensorVRDevice.prototype.resetSensor = function() {
+  // TODO
+};
+
+module.exports = LeapMotionPositionSensorVRDevice;
+
+},{"./base.js":1,"./three-math.js":10,"./touch-panner.js":11,"./util.js":12}],6:[function(_dereq_,module,exports){
 /*
  * Copyright 2015 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -549,7 +615,7 @@ var WebVRPolyfill = _dereq_('./webvr-polyfill.js');
 window.WebVRConfig = window.WebVRConfig || {};
 new WebVRPolyfill();
 
-},{"./webvr-polyfill.js":12}],6:[function(_dereq_,module,exports){
+},{"./webvr-polyfill.js":13}],7:[function(_dereq_,module,exports){
 /*
  * Copyright 2015 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -719,7 +785,7 @@ MouseKeyboardPositionSensorVRDevice.prototype.resetSensor = function() {
 
 module.exports = MouseKeyboardPositionSensorVRDevice;
 
-},{"./base.js":1,"./three-math.js":9,"./util.js":11}],7:[function(_dereq_,module,exports){
+},{"./base.js":1,"./three-math.js":10,"./util.js":12}],8:[function(_dereq_,module,exports){
 /*
  * Copyright 2015 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -802,7 +868,7 @@ PosePredictor.prototype.getPrediction = function(currentQ, gyro, timestampS) {
 
 module.exports = PosePredictor;
 
-},{"./three-math.js":9}],8:[function(_dereq_,module,exports){
+},{"./three-math.js":10}],9:[function(_dereq_,module,exports){
 function SensorSample(sample, timestampS) {
   this.set(sample, timestampS);
 };
@@ -818,7 +884,7 @@ SensorSample.prototype.copy = function(sensorSample) {
 
 module.exports = SensorSample;
 
-},{}],9:[function(_dereq_,module,exports){
+},{}],10:[function(_dereq_,module,exports){
 /*
  * A subset of THREE.js, providing mostly quaternion and euler-related
  * operations, manually lifted from
@@ -3113,7 +3179,7 @@ THREE.Math = {
 
 module.exports = THREE;
 
-},{}],10:[function(_dereq_,module,exports){
+},{}],11:[function(_dereq_,module,exports){
 /*
  * Copyright 2015 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -3191,7 +3257,7 @@ TouchPanner.prototype.onTouchEnd_ = function(e) {
 
 module.exports = TouchPanner;
 
-},{"./three-math.js":9,"./util.js":11}],11:[function(_dereq_,module,exports){
+},{"./three-math.js":10,"./util.js":12}],12:[function(_dereq_,module,exports){
 /*
  * Copyright 2015 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -3239,7 +3305,7 @@ Util.isTimestampDeltaValid = function(timestampDeltaS) {
 
 module.exports = Util;
 
-},{}],12:[function(_dereq_,module,exports){
+},{}],13:[function(_dereq_,module,exports){
 /*
  * Copyright 2015 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -3259,8 +3325,12 @@ var CardboardHMDVRDevice = _dereq_('./cardboard-hmd-vr-device.js');
 //var OrientationPositionSensorVRDevice = require('./orientation-position-sensor-vr-device.js');
 var FusionPositionSensorVRDevice = _dereq_('./fusion-position-sensor-vr-device.js');
 var MouseKeyboardPositionSensorVRDevice = _dereq_('./mouse-keyboard-position-sensor-vr-device.js');
+
 // Uncomment to add positional tracking via webcam.
 //var WebcamPositionSensorVRDevice = require('./webcam-position-sensor-vr-device.js');
+
+var LeapMotionPositionSensorVRDevice = _dereq_('./leap-motion-position-sensor-vr-device.js');
+
 var HMDVRDevice = _dereq_('./base.js').HMDVRDevice;
 var PositionSensorVRDevice = _dereq_('./base.js').PositionSensorVRDevice;
 
@@ -3286,7 +3356,8 @@ WebVRPolyfill.prototype.enablePolyfill = function() {
   // Polyfill using the right position sensor.
   if (this.isMobile()) {
     //this.devices.push(new OrientationPositionSensorVRDevice());
-    this.devices.push(new FusionPositionSensorVRDevice());
+    //this.devices.push(new FusionPositionSensorVRDevice());
+    this.devices.push(new LeapMotionPositionSensorVRDevice());
   } else {
     if (!WebVRConfig.MOUSE_KEYBOARD_CONTROLS_DISABLED) {
       this.devices.push(new MouseKeyboardPositionSensorVRDevice());
@@ -3330,4 +3401,4 @@ WebVRPolyfill.prototype.isCardboardCompatible = function() {
 
 module.exports = WebVRPolyfill;
 
-},{"./base.js":1,"./cardboard-hmd-vr-device.js":2,"./fusion-position-sensor-vr-device.js":4,"./mouse-keyboard-position-sensor-vr-device.js":6}]},{},[5]);
+},{"./base.js":1,"./cardboard-hmd-vr-device.js":2,"./fusion-position-sensor-vr-device.js":4,"./leap-motion-position-sensor-vr-device.js":5,"./mouse-keyboard-position-sensor-vr-device.js":7}]},{},[6]);

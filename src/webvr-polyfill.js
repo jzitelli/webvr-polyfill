@@ -17,8 +17,12 @@ var CardboardHMDVRDevice = require('./cardboard-hmd-vr-device.js');
 //var OrientationPositionSensorVRDevice = require('./orientation-position-sensor-vr-device.js');
 var FusionPositionSensorVRDevice = require('./fusion-position-sensor-vr-device.js');
 var MouseKeyboardPositionSensorVRDevice = require('./mouse-keyboard-position-sensor-vr-device.js');
+
 // Uncomment to add positional tracking via webcam.
 //var WebcamPositionSensorVRDevice = require('./webcam-position-sensor-vr-device.js');
+
+var LeapMotionPositionSensorVRDevice = require('./leap-motion-position-sensor-vr-device.js');
+
 var HMDVRDevice = require('./base.js').HMDVRDevice;
 var PositionSensorVRDevice = require('./base.js').PositionSensorVRDevice;
 
@@ -44,7 +48,8 @@ WebVRPolyfill.prototype.enablePolyfill = function() {
   // Polyfill using the right position sensor.
   if (this.isMobile()) {
     //this.devices.push(new OrientationPositionSensorVRDevice());
-    this.devices.push(new FusionPositionSensorVRDevice());
+    //this.devices.push(new FusionPositionSensorVRDevice());
+    this.devices.push(new LeapMotionPositionSensorVRDevice());
   } else {
     if (!WebVRConfig.MOUSE_KEYBOARD_CONTROLS_DISABLED) {
       this.devices.push(new MouseKeyboardPositionSensorVRDevice());

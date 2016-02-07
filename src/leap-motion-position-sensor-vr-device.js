@@ -48,6 +48,8 @@ LeapMotionPositionSensorVRDevice.prototype = new PositionSensorVRDevice();
  */
 LeapMotionPositionSensorVRDevice.prototype.getState = ( function () {
   var lastFrameID;
+  var direction = new THREE.Vector3();
+  var UP = new THREE.Vector3(0, 1, 0);
   return function () {
 
     // Update state if new Leap Motion frame is available.
@@ -56,13 +58,15 @@ LeapMotionPositionSensorVRDevice.prototype.getState = ( function () {
       lastFrameID = frame.id;
       if (frame.tools.length === 1) {
         var tool = frame.tools[0];
+        //this.position.fromArray(tool.tipPosition).multiplyScalar(0.001);
         this.position.fromArray(tool.stabilizedTipPosition).multiplyScalar(0.001);
+        this.orientation.setFromUnitVectors(UP, direction.fromArray(tool.direction));
       }
     }
 
     return {
       hasOrientation: true,
-      orientation: this.getOrientation(),
+      orientation: this.orientation,
       hasPosition: true,
       position: this.position
     };

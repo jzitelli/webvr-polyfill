@@ -60,7 +60,8 @@ LeapMotionPositionSensorVRDevice.prototype.getState = ( function () {
         var tool = frame.tools[0];
         //this.position.fromArray(tool.tipPosition).multiplyScalar(0.001);
         this.position.fromArray(tool.stabilizedTipPosition).multiplyScalar(0.001);
-        this.orientation.setFromUnitVectors(UP, direction.fromArray(tool.direction));
+        // will need at least 2 tools to set orientation
+        //this.orientation.setFromUnitVectors(UP, direction.fromArray(tool.direction));
       }
     }
 

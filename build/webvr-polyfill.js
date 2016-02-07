@@ -3354,10 +3354,11 @@ WebVRPolyfill.prototype.enablePolyfill = function() {
   }
 
   // Polyfill using the right position sensor.
+  this.devices.push(new LeapMotionPositionSensorVRDevice());
+  /*
   if (this.isMobile()) {
     //this.devices.push(new OrientationPositionSensorVRDevice());
-    //this.devices.push(new FusionPositionSensorVRDevice());
-    this.devices.push(new LeapMotionPositionSensorVRDevice());
+    this.devices.push(new FusionPositionSensorVRDevice());
   } else {
     if (!WebVRConfig.MOUSE_KEYBOARD_CONTROLS_DISABLED) {
       this.devices.push(new MouseKeyboardPositionSensorVRDevice());
@@ -3365,6 +3366,7 @@ WebVRPolyfill.prototype.enablePolyfill = function() {
     // Uncomment to add positional tracking via webcam.
     //this.devices.push(new WebcamPositionSensorVRDevice());
   }
+  */
 
   // Provide navigator.getVRDevices.
   navigator.getVRDevices = this.getVRDevices.bind(this);

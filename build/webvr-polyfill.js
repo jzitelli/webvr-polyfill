@@ -547,7 +547,17 @@ function LeapMotionPositionSensorVRDevice(host, port) {
   this.orientation = new THREE.Quaternion();
   this.position = new THREE.Vector3();
 
-  // Leap Motion input
+  // configure leap motion host/port via url params:
+  location.search.substr(1).split("&").forEach( function(item) {
+    var kv = item.split("=");
+    if (kv[0] === 'host') {
+      host = host || decodeURIComponent(kv[1]);
+    }
+    else if (kv[0] === 'port') {
+      port = port || decodeURIComponent(kv[1]);
+    }
+  } );
+
   var leapConfig = {
     background: true /* ,
     frameEventName: 'animationFrame' */
@@ -558,6 +568,7 @@ function LeapMotionPositionSensorVRDevice(host, port) {
   if (port) {
     leapConfig.port = port;
   }
+
   this.leapController = new Leap.Controller(leapConfig);
 
   this.leapController.on('connect', function () {
@@ -579,21 +590,47 @@ LeapMotionPositionSensorVRDevice.prototype = new PositionSensorVRDevice();
  */
 LeapMotionPositionSensorVRDevice.prototype.getState = ( function () {
   var lastFrameID;
-  var direction = new THREE.Vector3();
-  var UP = new THREE.Vector3(0, 1, 0);
+  // tool ids (TODO):
+  //var idA, idB;
+  // normalized pointing directions of the tools:
+  var directionA = new THREE.Vector3();
+  var directionB = new THREE.Vector3();
+  // used for computing orientation quaternion:
+  var cross = new THREE.Vector3();
+  var avg = new THREE.Vector3();
+  var Y = new THREE.Vector3(0, 1, 0);
+  var NZ = new THREE.Vector3(0, 0, -1);
+  var quat = new THREE.Quaternion();
+
   return function () {
 
     // Update state if new Leap Motion frame is available.
     var frame = this.leapController.frame();
     if (frame.valid && frame.id != lastFrameID) {
       lastFrameID = frame.id;
-      if (frame.tools.length === 1) {
-        var tool = frame.tools[0];
-        //this.position.fromArray(tool.tipPosition).multiplyScalar(0.001);
-        this.position.fromArray(tool.stabilizedTipPosition).multiplyScalar(0.001);
-        // will need at least 2 tools to set orientation
-        //this.orientation.setFromUnitVectors(UP, direction.fromArray(tool.direction));
+
+      if (frame.tools.length === 2) {
+
+        var toolA = frame.tools[0];
+        var toolB = frame.tools[1];
+
+        // set position to the average of the tips:
+        this.position.set(0.0005 * (toolA.tipPosition[0] + toolB.tipPosition[0]),
+                          0.0005 * (toolA.tipPosition[1] + toolB.tipPosition[1]),
+                          0.0005 * (toolA.tipPosition[2] + toolB.tipPosition[2]));
+
+        // determine orientation:
+        cross.crossVectors(directionA.fromArray(toolA.direction), directionB.fromArray(toolB.direction));
+        if (cross.y < 0) {
+          cross.negate();
+        }
+        avg.addVectors(directionA, directionB).normalize();
+        this.orientation.setFromUnitVectors(NZ, avg);
+        Y.set(0, 1, 0).applyQuaternion(this.orientation);
+        quat.setFromUnitVectors(Y, cross);
+        this.orientation.multiplyQuaternions(this.orientation, quat);
       }
+
     }
 
     return {
@@ -606,17 +643,15 @@ LeapMotionPositionSensorVRDevice.prototype.getState = ( function () {
   };
 } )();
 
-LeapMotionPositionSensorVRDevice.prototype.getOrientation = function() {
-  return this.orientation;
-};
-
-LeapMotionPositionSensorVRDevice.prototype.getPosition = function() {
-  return this.position;
-};
-
-LeapMotionPositionSensorVRDevice.prototype.resetSensor = function() {
-  // TODO
-};
+// TODO:
+// LeapMotionPositionSensorVRDevice.prototype.getOrientation = function() {
+//   return this.orientation;
+// };
+// LeapMotionPositionSensorVRDevice.prototype.getPosition = function() {
+//   return this.position;
+// };
+// LeapMotionPositionSensorVRDevice.prototype.resetSensor = function() {
+// };
 
 module.exports = LeapMotionPositionSensorVRDevice;
 

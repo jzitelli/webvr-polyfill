@@ -59,29 +59,63 @@ LeapMotionPositionSensorVRDevice.prototype = new PositionSensorVRDevice();
  */
 LeapMotionPositionSensorVRDevice.prototype.getState = ( function () {
   var lastFrameID;
-  // tool ids (TODO):
-  //var idA, idB;
+  // tool ids:
+  var toolA, idA = null;
+  var toolB, idB = null;
   // normalized pointing directions of the tools:
   var directionA = new THREE.Vector3();
   var directionB = new THREE.Vector3();
   // used for computing orientation quaternion:
+  const NZ = new THREE.Vector3(0, 0, -1);
+  var Y = new THREE.Vector3();
   var cross = new THREE.Vector3();
   var avg = new THREE.Vector3();
-  var Y = new THREE.Vector3(0, 1, 0);
-  var NZ = new THREE.Vector3(0, 0, -1);
   var quat = new THREE.Quaternion();
+  const inv_sqrt2 = 1 / Math.sqrt(2);
 
   return function () {
 
     // Update state if new Leap Motion frame is available.
     var frame = this.leapController.frame();
     if (frame.valid && frame.id != lastFrameID) {
+
       lastFrameID = frame.id;
 
-      if (frame.tools.length === 2) {
+      // manage tool IDs:
+      if (idA !== null) {
+        // A was tracking, try to find it again
+        toolA = frame.tool(idA);
+        if (!toolA.valid) {
+          // A is lost
+          idA = null;
+        }
+      }
+      if (idB !== null) {
+        // B was tracking, try to find it again
+        toolB = frame.tool(idB);
+        if (!toolB.valid) {
+          // B is lost
+          idB = null;
+        }
+      }
+      if (frame.tools.length === 1) {
+        if (idA === null && idB === null) {
+          // start tracking A
+          toolA = frame.tools[0];
+          idA = toolA.id;
+        }
+      } else if (frame.tools.length === 2) {
+        if (idA !== null && idB === null) {
+          // start tracking B
+          toolB = (frame.tools[0].id === idA ? frame.tools[1] : frame.tools[0]);
+          idB = toolB.id;
+        } else if (idB !== null && idA === null) {
+          toolA = (frame.tools[0].id === idB ? frame.tools[1] : frame.tools[1]);
+          idA = toolA.id;
+        }
+      }
 
-        var toolA = frame.tools[0];
-        var toolB = frame.tools[1];
+      if (idA !== null && idB !== null) {
 
         // set position to the average of the tips:
         this.position.set(0.0005 * (toolA.tipPosition[0] + toolB.tipPosition[0]),
@@ -89,15 +123,29 @@ LeapMotionPositionSensorVRDevice.prototype.getState = ( function () {
                           0.0005 * (toolA.tipPosition[2] + toolB.tipPosition[2]));
 
         // determine orientation:
-        cross.crossVectors(directionA.fromArray(toolA.direction), directionB.fromArray(toolB.direction));
+        directionA.fromArray(toolA.direction);
+        directionB.fromArray(toolB.direction);
+
+        cross.crossVectors(directionA, directionB);
         if (cross.y < 0) {
           cross.negate();
         }
-        avg.addVectors(directionA, directionB).normalize();
-        this.orientation.setFromUnitVectors(NZ, avg);
-        Y.set(0, 1, 0).applyQuaternion(this.orientation);
-        quat.setFromUnitVectors(Y, cross);
-        this.orientation.multiplyQuaternions(this.orientation, quat);
+
+        avg.addVectors(directionA, directionB);
+
+        // not performed under assumption that A, B are orthogonal
+        //avg.normalize();
+        avg.multiplyScalar(inv_sqrt2);
+
+        quat.setFromUnitVectors(NZ, avg);
+        Y.set(0, 1, 0).applyQuaternion(quat);
+
+        // not performed under assumption that A, B are orthogonal
+        //cross.normalize();
+        this.orientation.setFromUnitVectors(Y, cross);
+
+        this.orientation.multiplyQuaternions(quat, this.orientation);
+
       }
 
     }

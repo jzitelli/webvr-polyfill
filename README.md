@@ -54,5 +54,7 @@ are supported:
       // for panoramas with nothing interesting above or below.
       //YAW_ONLY: true, // Default: false.
       // To disable keyboard and mouse controls. If you implement your own.
-      //MOUSE_KEYBOARD_CONTROLS_DISABLED: true // Default: false
+      //MOUSE_KEYBOARD_CONTROLS_DISABLED: true, // Default: false
+      // To disable keyboard controls, but not mouse. If you implement your own.
+      //KEYBOARD_CONTROLS_DISABLED: true // Default: false
     }

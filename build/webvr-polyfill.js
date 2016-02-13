@@ -713,7 +713,9 @@ function MouseKeyboardPositionSensorVRDevice() {
   this.deviceName = 'VR Position Device (webvr-polyfill:mouse-keyboard)';
 
   // Attach to mouse and keyboard events.
-  window.addEventListener('keydown', this.onKeyDown_.bind(this));
+  if (!WebVRConfig.KEYBOARD_CONTROLS_DISABLED) {
+    window.addEventListener('keydown', this.onKeyDown_.bind(this));
+  }
   window.addEventListener('mousemove', this.onMouseMove_.bind(this));
   window.addEventListener('mousedown', this.onMouseDown_.bind(this));
   window.addEventListener('mouseup', this.onMouseUp_.bind(this));
@@ -823,8 +825,11 @@ MouseKeyboardPositionSensorVRDevice.prototype.onMouseMove_ = function(e) {
 
   // Keep track of the cumulative euler angles.
   var element = document.body;
-  this.phi += 2 * Math.PI * this.rotateDelta.y / element.clientHeight * MOUSE_SPEED_Y;
-  this.theta += 2 * Math.PI * this.rotateDelta.x / element.clientWidth * MOUSE_SPEED_X;
+  // I'm having some problem w/ element.clientHeight/clientWidth ?
+  // this.phi += 2 * Math.PI * this.rotateDelta.y / element.clientHeight * MOUSE_SPEED_Y;
+  // this.theta += 2 * Math.PI * this.rotateDelta.x / element.clientWidth * MOUSE_SPEED_X;
+  this.phi += 2 * Math.PI * this.rotateDelta.y / 1000 * MOUSE_SPEED_Y;
+  this.theta += 2 * Math.PI * this.rotateDelta.x / 1000 * MOUSE_SPEED_X;
 
   // Prevent looking too far up or down.
   this.phi = Util.clamp(this.phi, -Math.PI/2, Math.PI/2);

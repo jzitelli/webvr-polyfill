@@ -23,6 +23,7 @@ var nextDisplayId = 1000;
  * The base class for all VR displays.
  */
 function VRDisplay() {
+  this.isPolyfilled = true;
   this.displayId = nextDisplayId++;
   this.displayName = 'webvr-polyfill displayName';
 
@@ -71,6 +72,10 @@ VRDisplay.prototype.wrapForFullscreen = function(element) {
   if (!this.fullscreenWrapper_) {
     this.fullscreenWrapper_ = document.createElement('div');
     this.fullscreenWrapper_.classList.add('webvr-polyfill-fullscreen-wrapper');
+    // Make sure the wrapper takes the full screen. Without this, there is a
+    // white line at the bottom.
+    this.fullscreenWrapper_.style.width = '100%';
+    this.fullscreenWrapper_.style.height = '100%';
   }
 
   if (this.fullscreenElement_ == element)
@@ -289,6 +294,7 @@ VRDisplay.prototype.getEyeParameters = function(whichEye) {
  * The base class for all VR devices. (Deprecated)
  */
 function VRDevice() {
+  this.isPolyfilled = true;
   this.hardwareUnitId = 'webvr-polyfill hardwareUnitId';
   this.deviceId = 'webvr-polyfill deviceId';
   this.deviceName = 'webvr-polyfill deviceName';

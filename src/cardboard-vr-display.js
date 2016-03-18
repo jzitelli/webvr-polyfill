@@ -128,13 +128,17 @@ CardboardVRDisplay.prototype.beginPresent_ = function() {
   }
 
   this.cardboardUI_.listen(function() {
-    this.viewerSelector_.show();
+    // Options clicked
+    this.viewerSelector_.show(this.layer_.source.parentElement);
+  }.bind(this), function() {
+    // Back clicked
+    this.exitPresent();
   }.bind(this));
 
-  if (Util.isLandscapeMode() && Util.isMobile()) {
+  if (!Util.isLandscapeMode() && Util.isMobile()) {
     // In landscape mode, temporarily show the "put into Cardboard"
     // interstitial. Otherwise, do the default thing.
-    this.rotateInstructions_.showTemporarily(3000);
+    this.rotateInstructions_.showTemporarily(3000, this.fullscreenWrapper_);
   } else {
     this.rotateInstructions_.update();
   }
@@ -142,6 +146,10 @@ CardboardVRDisplay.prototype.beginPresent_ = function() {
   // Listen for orientation change events in order to show interstitial.
   this.orientationHandler = this.onOrientationChange_.bind(this);
   window.addEventListener('orientationchange', this.orientationHandler);
+
+  // Fire this event initially, to give geometry-distortion clients the chance
+  // to do something custom.
+  this.fireVRDisplayDeviceParamsChange_();
 };
 
 CardboardVRDisplay.prototype.endPresent_ = function() {
@@ -180,9 +188,19 @@ CardboardVRDisplay.prototype.onViewerChanged_ = function(viewer) {
   // Update the distortion appropriately.
   this.distorter_.updateDeviceInfo(this.deviceInfo_);
 
-  // TODO: Emit a custom event which includes device info and viewer info. This
-  // is for clients that want to implement their own geometry-based distortion.
-  //this.emit('viewerchange', viewer);
+  // Fire a new event containing viewer and device parameters for clients that
+  // want to implement their own geometry-based distortion.
+  this.fireVRDisplayDeviceParamsChange_();
+};
+
+CardboardVRDisplay.prototype.fireVRDisplayDeviceParamsChange_ = function() {
+  var event = new CustomEvent('vrdisplaydeviceparamschange', {
+    detail: {
+      vrdisplay: this,
+      deviceInfo: this.deviceInfo_,
+    }
+  });
+  window.dispatchEvent(event);
 };
 
 module.exports = CardboardVRDisplay;

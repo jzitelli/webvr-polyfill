@@ -1439,8 +1439,11 @@ function CardboardDistorter(gl) {
   this.realColorMask = gl.colorMask;
   this.realClearColor = gl.clearColor;
   this.realViewport = gl.viewport;
-  this.realCanvasWidth = Object.getOwnPropertyDescriptor(gl.canvas.__proto__, 'width');
-  this.realCanvasHeight = Object.getOwnPropertyDescriptor(gl.canvas.__proto__, 'height');
+
+  if (!Util.isIOS()) {
+    this.realCanvasWidth = Object.getOwnPropertyDescriptor(gl.canvas.__proto__, 'width');
+    this.realCanvasHeight = Object.getOwnPropertyDescriptor(gl.canvas.__proto__, 'height');
+  }
 
   this.isPatched = false;
 
@@ -1604,32 +1607,34 @@ CardboardDistorter.prototype.patch = function() {
   var canvas = this.gl.canvas;
   var gl = this.gl;
 
-  canvas.width = Util.getScreenWidth() * this.bufferScale;
-  canvas.height = Util.getScreenHeight() * this.bufferScale;
+  if (!Util.isIOS()) {
+    canvas.width = Util.getScreenWidth() * this.bufferScale;
+    canvas.height = Util.getScreenHeight() * this.bufferScale;
 
-  Object.defineProperty(canvas, 'width', {
-    configurable: true,
-    enumerable: true,
-    get: function() {
-      return self.bufferWidth;
-    },
-    set: function(value) {
-      self.bufferWidth = value;
-      self.onResize();
-    }
-  });
+    Object.defineProperty(canvas, 'width', {
+      configurable: true,
+      enumerable: true,
+      get: function() {
+        return self.bufferWidth;
+      },
+      set: function(value) {
+        self.bufferWidth = value;
+        self.onResize();
+      }
+    });
 
-  Object.defineProperty(canvas, 'height', {
-    configurable: true,
-    enumerable: true,
-    get: function() {
-      return self.bufferHeight;
-    },
-    set: function(value) {
-      self.bufferHeight = value;
-      self.onResize();
-    }
-  });
+    Object.defineProperty(canvas, 'height', {
+      configurable: true,
+      enumerable: true,
+      get: function() {
+        return self.bufferHeight;
+      },
+      set: function(value) {
+        self.bufferHeight = value;
+        self.onResize();
+      }
+    });
+  }
 
   this.lastBoundFramebuffer = gl.getParameter(gl.FRAMEBUFFER_BINDING);
 
@@ -1710,8 +1715,10 @@ CardboardDistorter.prototype.unpatch = function() {
   var gl = this.gl;
   var canvas = this.gl.canvas;
 
-  Object.defineProperty(canvas, 'width', this.realCanvasWidth);
-  Object.defineProperty(canvas, 'height', this.realCanvasHeight);
+  if (!Util.isIOS()) {
+    Object.defineProperty(canvas, 'width', this.realCanvasWidth);
+    Object.defineProperty(canvas, 'height', this.realCanvasHeight);
+  }
   canvas.width = this.bufferWidth;
   canvas.height = this.bufferHeight;
 
@@ -1785,7 +1792,7 @@ CardboardDistorter.prototype.submitFrame = function() {
 
     // If the backbuffer has an alpha channel clear every frame so the page
     // doesn't show through.
-    if (self.ctxAttribs.alpha) {
+    if (self.ctxAttribs.alpha || Util.isIOS()) {
       self.realClearColor.call(gl, 0, 0, 0, 1);
       gl.clear(gl.COLOR_BUFFER_BIT);
     }
@@ -1838,6 +1845,19 @@ CardboardDistorter.prototype.submitFrame = function() {
       self.realClearColor.apply(gl, self.clearColor);
     }
   });
+
+  // Workaround for the fact that Safari doesn't allow us to patch the canvas
+  // width and height correctly. After each submit frame check to see what the
+  // real backbuffer size has been set to and resize the fake backbuffer size
+  // to match.
+  if (Util.isIOS()) {
+    var canvas = gl.canvas;
+    if (canvas.width != self.bufferWidth || canvas.height != self.bufferHeight) {
+      self.bufferWidth = canvas.width;
+      self.bufferHeight = canvas.height;
+      self.onResize();
+    }
+  }
 };
 
 /**
@@ -2188,8 +2208,6 @@ CardboardUI.prototype.onResize = function() {
     // Buffer data
     gl.bindBuffer(gl.ARRAY_BUFFER, self.vertexBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-
-
   });
 };
 
@@ -7545,22 +7563,27 @@ Util.lerp = function(a, b, t) {
   return a + ((b - a) * t);
 };
 
-Util.pingPong = function(t, length) {
-  if (t < 0) t = -t;
+Util.isIOS = (function() {
+  var isIOS = /iPad|iPhone|iPod/.test(navigator.platform);
+  return function() {
+    return isIOS;
+  };
+})();
 
-  var mult = Math.floor(t / length);
-  var mod = t - (length * mult);
-  return mult % 2 ? length - mod : mod;
-};
+Util.isSafari = (function() {
+  var isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+  return function() {
+    return isSafari;
+  };
+})();
 
-Util.isIOS = function() {
-  return /iPad|iPhone|iPod/.test(navigator.platform);
-};
-
-Util.isFirefoxAndroid = function() {
-  return navigator.userAgent.indexOf('Firefox') !== -1 &&
+Util.isFirefoxAndroid = (function() {
+  var isFirefoxAndroid = navigator.userAgent.indexOf('Firefox') !== -1 &&
       navigator.userAgent.indexOf('Android') !== -1;
-};
+  return function() {
+    return isFirefoxAndroid;
+  };
+})();
 
 Util.isLandscapeMode = function() {
   return (window.orientation == 90 || window.orientation == -90);

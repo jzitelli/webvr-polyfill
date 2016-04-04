@@ -173,8 +173,6 @@ CardboardVRDisplay.prototype.submitFrame = function(pose) {
 };
 
 CardboardVRDisplay.prototype.onOrientationChange_ = function(e) {
-  console.log('onOrientationChange_');
-
   // Hide the viewer selector.
   this.viewerSelector_.hide();
 

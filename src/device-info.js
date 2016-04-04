@@ -67,6 +67,18 @@ var Viewers = {
     inverseCoefficients: [-0.33836704, -0.18162185, 0.862655, -1.2462051,
       1.0560602, -0.58208317, 0.21609078, -0.05444823, 0.009177956,
       -9.904169E-4, 6.183535E-5, -1.6981803E-6]
+  }),
+  DestekV2: new CardboardViewer({
+    id: 'DestekV2',
+    label: 'Destek 2015',
+    fov: 40,
+    interLensDistance: 0.061,
+    baselineLensDistance: 0.034,
+    screenLensDistance: 0.052,
+    distortionCoefficients: [0.07, 0.04],
+    inverseCoefficients: [-0.33836704, -0.18162185, 0.862655, -1.2462051,
+      1.0560602, -0.58208317, 0.21609078, -0.05444823, 0.009177956,
+      -9.904169E-4, 6.183535E-5, -1.6981803E-6] // CHECK: are inverseCoefficients used?
   })
 };
 

@@ -14,7 +14,7 @@
  */
 var Util = window.Util || {};
 
-Util.MIN_TIMESTEP = 0.01;
+Util.MIN_TIMESTEP = 0.0001;
 Util.MAX_TIMESTEP = 1;
 
 Util.base64 = function(mimeType, base64) {

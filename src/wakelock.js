@@ -61,8 +61,15 @@ function iOSWakeLock() {
   }
 }
 
+function NoWakeLock() {
+  this.request = function () {};
+  this.release = function () {};
+}
 
 function getWakeLock() {
+  if (WebVRConfig.NO_WAKELOCK) {
+    return NoWakeLock;
+  }
   var userAgent = navigator.userAgent || navigator.vendor || window.opera;
   if (userAgent.match(/iPhone/i) || userAgent.match(/iPod/i)) {
     return iOSWakeLock;

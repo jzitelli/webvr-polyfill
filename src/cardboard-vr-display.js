@@ -18,6 +18,7 @@ var CardboardUI = require('./cardboard-ui.js');
 var DeviceInfo = require('./device-info.js');
 var Dpdb = require('./dpdb/dpdb.js');
 var FusionPoseSensor = require('./sensor-fusion/fusion-pose-sensor.js');
+var LeapMotionPoseSensor = require('./sensor-fusion/leap-motion-pose-sensor.js');
 var RotateInstructions = require('./rotate-instructions.js');
 var ViewerSelector = require('./viewer-selector.js');
 var VRDisplay = require('./base.js').VRDisplay;

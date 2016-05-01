@@ -12,7 +12,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-var FusionPoseSensor = require('./fusion-pose-sensor.js');
+var ComplementaryFilter = require('./complementary-filter.js');
+var PosePredictor = require('./pose-predictor.js');
+var TouchPanner = require('../touch-panner.js');
 var THREE = require('../three-math.js');
 var Util = require('../util.js');
 

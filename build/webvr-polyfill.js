@@ -5092,7 +5092,9 @@ module.exports = FusionPoseSensor;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-var FusionPoseSensor = _dereq_('./fusion-pose-sensor.js');
+var ComplementaryFilter = _dereq_('./complementary-filter.js');
+var PosePredictor = _dereq_('./pose-predictor.js');
+var TouchPanner = _dereq_('../touch-panner.js');
 var THREE = _dereq_('../three-math.js');
 var Util = _dereq_('../util.js');
 
@@ -5377,7 +5379,7 @@ LeapMotionPoseSensor.prototype.setScreenTransform_ = function() {
 
 module.exports = LeapMotionPoseSensor;
 
-},{"../three-math.js":22,"../util.js":24,"./fusion-pose-sensor.js":18}],20:[function(_dereq_,module,exports){
+},{"../three-math.js":22,"../touch-panner.js":23,"../util.js":24,"./complementary-filter.js":17,"./pose-predictor.js":20}],20:[function(_dereq_,module,exports){
 /*
  * Copyright 2015 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");

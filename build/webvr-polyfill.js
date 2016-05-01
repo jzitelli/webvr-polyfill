@@ -5271,7 +5271,7 @@ LeapMotionPoseSensor.prototype.getState = ( function () {
       position: this.position
     };
 
-  }.bind(this);
+  };
 } )();
 
 LeapMotionPoseSensor.prototype.getPosition = function () {

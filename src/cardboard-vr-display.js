@@ -39,8 +39,13 @@ function CardboardVRDisplay() {
 
   // "Private" members.
   this.bufferScale_ = WebVRConfig.BUFFER_SCALE ? WebVRConfig.BUFFER_SCALE : 1.0;
-  this.poseSensor_ = new FusionPoseSensor();
-  //this.poseSensor_ = new LeapMotionPoseSensor();
+  
+  if (WebVRConfig.ENABLE_LEAP_MOTION) {
+    this.poseSensor_ = new LeapMotionPoseSensor(WebVRConfig.LEAP_MOTION_HOST, WebVRConfig.LEAP_MOTION_PORT);
+  } else {
+    this.poseSensor_ = new FusionPoseSensor();  
+  }
+
   this.distorter_ = null;
   this.cardboardUI_ = null;
 

@@ -2313,6 +2313,7 @@ function CardboardVRDisplay() {
   
   if (WebVRConfig.ENABLE_LEAP_MOTION) {
     this.poseSensor_ = new LeapMotionPoseSensor(WebVRConfig.LEAP_MOTION_HOST, WebVRConfig.LEAP_MOTION_PORT);
+    this.capabilities.hasPosition = true;  
   } else {
     this.poseSensor_ = new FusionPoseSensor();  
   }

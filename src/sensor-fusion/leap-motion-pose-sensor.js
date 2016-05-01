@@ -194,10 +194,11 @@ LeapMotionPoseSensor.prototype.getState = ( function () {
 } )();
 
 LeapMotionPoseSensor.prototype.getPosition = function () {
-  return this.getState().position;
+  var position = this.getState().position;
+  return [position.x, position.y, position.z];
 };
 
-LeapMotionPoseSensor.prototype.getOrientation = function() {
+LeapMotionPoseSensor.prototype.getOrientation = function () {
   // Convert from filter space to the the same system used by the
   // deviceorientation event.
   var orientation = this.filter.getOrientation();

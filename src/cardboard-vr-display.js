@@ -17,6 +17,7 @@ var CardboardDistorter = require('./cardboard-distorter.js');
 var DeviceInfo = require('./device-info.js');
 var Dpdb = require('./dpdb/dpdb.js');
 var FusionPoseSensor = require('./sensor-fusion/fusion-pose-sensor.js');
+var LeapMotionPoseSensor = require('./sensor-fusion/leap-motion-pose-sensor.js');
 var RotateInstructions = require('./rotate-instructions.js');
 var ViewerSelector = require('./viewer-selector.js');
 var VRDisplay = require('./base.js').VRDisplay;
@@ -39,6 +40,7 @@ function CardboardVRDisplay() {
   // "Private" members.
   this.bufferScale_ = WebVRConfig.BUFFER_SCALE ? WebVRConfig.BUFFER_SCALE : 1.0;
   this.poseSensor_ = new FusionPoseSensor();
+  //this.poseSensor_ = new LeapMotionPoseSensor();
   this.distorter_ = null;
   this.cardboardUI_ = null;
 

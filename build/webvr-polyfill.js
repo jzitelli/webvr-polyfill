@@ -1371,7 +1371,7 @@ module.exports.VRDevice = VRDevice;
 module.exports.HMDVRDevice = HMDVRDevice;
 module.exports.PositionSensorVRDevice = PositionSensorVRDevice;
 
-},{"./util.js":23,"./wakelock.js":25}],4:[function(_dereq_,module,exports){
+},{"./util.js":24,"./wakelock.js":26}],4:[function(_dereq_,module,exports){
 /*
  * Copyright 2016 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -1987,7 +1987,7 @@ CardboardDistorter.prototype.computeMeshIndices_ = function(width, height) {
 
 module.exports = CardboardDistorter;
 
-},{"./cardboard-ui.js":5,"./deps/wglu-preserve-state.js":7,"./util.js":23}],5:[function(_dereq_,module,exports){
+},{"./cardboard-ui.js":5,"./deps/wglu-preserve-state.js":7,"./util.js":24}],5:[function(_dereq_,module,exports){
 /*
  * Copyright 2016 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -2268,7 +2268,7 @@ CardboardUI.prototype.renderNoState = function() {
 };
 
 module.exports = CardboardUI;
-},{"./deps/wglu-preserve-state.js":7,"./util.js":23}],6:[function(_dereq_,module,exports){
+},{"./deps/wglu-preserve-state.js":7,"./util.js":24}],6:[function(_dereq_,module,exports){
 /*
  * Copyright 2016 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -2288,6 +2288,7 @@ var CardboardDistorter = _dereq_('./cardboard-distorter.js');
 var DeviceInfo = _dereq_('./device-info.js');
 var Dpdb = _dereq_('./dpdb/dpdb.js');
 var FusionPoseSensor = _dereq_('./sensor-fusion/fusion-pose-sensor.js');
+var LeapMotionPoseSensor = _dereq_('./sensor-fusion/leap-motion-pose-sensor.js');
 var RotateInstructions = _dereq_('./rotate-instructions.js');
 var ViewerSelector = _dereq_('./viewer-selector.js');
 var VRDisplay = _dereq_('./base.js').VRDisplay;
@@ -2309,7 +2310,13 @@ function CardboardVRDisplay() {
 
   // "Private" members.
   this.bufferScale_ = WebVRConfig.BUFFER_SCALE ? WebVRConfig.BUFFER_SCALE : 1.0;
-  this.poseSensor_ = new FusionPoseSensor();
+  
+  if (WebVRConfig.ENABLE_LEAP_MOTION) {
+    this.poseSensor_ = new LeapMotionPoseSensor(WebVRConfig.LEAP_MOTION_HOST, WebVRConfig.LEAP_MOTION_PORT);
+  } else {
+    this.poseSensor_ = new FusionPoseSensor();  
+  }
+
   this.distorter_ = null;
   this.cardboardUI_ = null;
 
@@ -2474,7 +2481,7 @@ CardboardVRDisplay.prototype.fireVRDisplayDeviceParamsChange_ = function() {
 
 module.exports = CardboardVRDisplay;
 
-},{"./base.js":3,"./cardboard-distorter.js":4,"./device-info.js":8,"./dpdb/dpdb.js":12,"./rotate-instructions.js":16,"./sensor-fusion/fusion-pose-sensor.js":18,"./util.js":23,"./viewer-selector.js":24}],7:[function(_dereq_,module,exports){
+},{"./base.js":3,"./cardboard-distorter.js":4,"./device-info.js":8,"./dpdb/dpdb.js":12,"./rotate-instructions.js":16,"./sensor-fusion/fusion-pose-sensor.js":18,"./sensor-fusion/leap-motion-pose-sensor.js":19,"./util.js":24,"./viewer-selector.js":25}],7:[function(_dereq_,module,exports){
 /*
 Copyright (c) 2016, Brandon Jones.
 
@@ -3037,7 +3044,7 @@ function CardboardViewer(params) {
 DeviceInfo.Viewers = Viewers;
 module.exports = DeviceInfo;
 
-},{"./distortion/distortion.js":10,"./three-math.js":21,"./util.js":23}],9:[function(_dereq_,module,exports){
+},{"./distortion/distortion.js":10,"./three-math.js":22,"./util.js":24}],9:[function(_dereq_,module,exports){
 /*
  * Copyright 2016 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -4339,7 +4346,7 @@ function DeviceParams(params) {
 }
 
 module.exports = Dpdb;
-},{"../util.js":23,"./dpdb-cache.js":11}],13:[function(_dereq_,module,exports){
+},{"../util.js":24,"./dpdb-cache.js":11}],13:[function(_dereq_,module,exports){
 /*
  * Copyright 2015 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -4411,7 +4418,7 @@ if (!window.WebVRConfig.DEFER_INITIALIZATION) {
   }
 }
 
-},{"./webvr-polyfill.js":26}],15:[function(_dereq_,module,exports){
+},{"./webvr-polyfill.js":27}],15:[function(_dereq_,module,exports){
 /*
  * Copyright 2016 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -4592,7 +4599,7 @@ MouseKeyboardVRDisplay.prototype.resetPose = function() {
 
 module.exports = MouseKeyboardVRDisplay;
 
-},{"./base.js":3,"./three-math.js":21,"./util.js":23}],16:[function(_dereq_,module,exports){
+},{"./base.js":3,"./three-math.js":22,"./util.js":24}],16:[function(_dereq_,module,exports){
 /*
  * Copyright 2015 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -4735,7 +4742,7 @@ RotateInstructions.prototype.loadIcon_ = function() {
 
 module.exports = RotateInstructions;
 
-},{"./util.js":23}],17:[function(_dereq_,module,exports){
+},{"./util.js":24}],17:[function(_dereq_,module,exports){
 /*
  * Copyright 2015 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -4903,7 +4910,7 @@ ComplementaryFilter.prototype.gyroToQuaternionDelta_ = function(gyro, dt) {
 
 module.exports = ComplementaryFilter;
 
-},{"../three-math.js":21,"../util.js":23,"./sensor-sample.js":20}],18:[function(_dereq_,module,exports){
+},{"../three-math.js":22,"../util.js":24,"./sensor-sample.js":21}],18:[function(_dereq_,module,exports){
 /*
  * Copyright 2015 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -5070,7 +5077,180 @@ FusionPoseSensor.prototype.setScreenTransform_ = function() {
 
 module.exports = FusionPoseSensor;
 
-},{"../three-math.js":21,"../touch-panner.js":22,"../util.js":23,"./complementary-filter.js":17,"./pose-predictor.js":19}],19:[function(_dereq_,module,exports){
+},{"../three-math.js":22,"../touch-panner.js":23,"../util.js":24,"./complementary-filter.js":17,"./pose-predictor.js":20}],19:[function(_dereq_,module,exports){
+/*
+ * Copyright 2015 Google Inc. All Rights Reserved.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+var FusionPoseSensor = _dereq_('./fusion-pose-sensor.js');
+var THREE = _dereq_('../three-math.js');
+var Util = _dereq_('../util.js');
+
+function LeapMotionPoseSensor(host, port) {
+  this.deviceId = 'webvr-polyfill:leapmotion';
+  this.deviceName = 'VR Position Device (webvr-polyfill:leapmotion)';
+
+  // configure leap motion host/port via url params:
+  location.search.substr(1).split("&").forEach( function(item) {
+    var kv = item.split("=");
+    if (kv[0] === 'host') {
+      host = host || decodeURIComponent(kv[1]);
+    }
+    else if (kv[0] === 'port') {
+      port = port || decodeURIComponent(kv[1]);
+    }
+  } );
+
+  var leapConfig = {
+    background: true
+  };
+  if (host) {
+    leapConfig.host = host;
+  }
+  if (port) {
+    leapConfig.port = port;
+  }
+
+  this.leapController = new Leap.Controller(leapConfig);
+
+  this.leapController.on('connect', function () {
+    console.log('LeapMotionPositionSensorVRDevice: connected to Leap Motion controller');
+  });
+  this.leapController.on('streamingStarted', function () {
+    console.log('LeapMotionPositionSensorVRDevice: streaming started');
+  });
+  this.leapController.on('streamingStopped', function () {
+    console.log('LeapMotionPositionSensorVRDevice: streaming stopped');
+  });
+
+  this.leapController.connect();
+}
+
+LeapMotionPoseSensor.prototype = new FusionPoseSensor();
+
+/**
+ * Returns {orientation: {x,y,z,w}, position: {x,y,z}}.
+ */
+LeapMotionPoseSensor.prototype.getState = ( function () {
+  var lastFrameID;
+  // tool ids:
+  var toolA, idA = null;
+  var toolB, idB = null;
+  // normalized pointing directions of the tools:
+  var directionA = new THREE.Vector3();
+  var directionB = new THREE.Vector3();
+  // used for computing orientation quaternion:
+  const NZ = new THREE.Vector3(0, 0, -1);
+  var Y = new THREE.Vector3();
+  var cross = new THREE.Vector3();
+  var avg = new THREE.Vector3();
+  var quat = new THREE.Quaternion();
+  const inv_sqrt2 = 1 / Math.sqrt(2);
+
+  return function () {
+
+    // Update state if new Leap Motion frame is available.
+    var frame = this.leapController.frame();
+    if (frame.valid && frame.id != lastFrameID) {
+
+      lastFrameID = frame.id;
+
+      // manage tool IDs:
+      if (idA !== null) {
+        // A was tracking, try to find it again
+        toolA = frame.tool(idA);
+        if (!toolA.valid) {
+          // A is lost
+          idA = null;
+        }
+      }
+      if (idB !== null) {
+        // B was tracking, try to find it again
+        toolB = frame.tool(idB);
+        if (!toolB.valid) {
+          // B is lost
+          idB = null;
+        }
+      }
+      if (frame.tools.length === 1) {
+        if (idA === null && idB === null) {
+          // start tracking A
+          toolA = frame.tools[0];
+          idA = toolA.id;
+        }
+      } else if (frame.tools.length === 2) {
+        if (idA !== null && idB === null) {
+          // start tracking B
+          toolB = (frame.tools[0].id === idA ? frame.tools[1] : frame.tools[0]);
+          idB = toolB.id;
+        } else if (idB !== null && idA === null) {
+          toolA = (frame.tools[0].id === idB ? frame.tools[1] : frame.tools[1]);
+          idA = toolA.id;
+        }
+      }
+
+      if (idA !== null && idB !== null) {
+
+        // set position to the average of the tips:
+        this.position.set(0.0005 * (toolA.tipPosition[0] + toolB.tipPosition[0]),
+                          0.0005 * (toolA.tipPosition[1] + toolB.tipPosition[1]),
+                          0.0005 * (toolA.tipPosition[2] + toolB.tipPosition[2]));
+
+        // determine orientation:
+        directionA.fromArray(toolA.direction);
+        directionB.fromArray(toolB.direction);
+
+        cross.crossVectors(directionA, directionB);
+        if (cross.y < 0) {
+          cross.negate();
+        }
+
+        avg.addVectors(directionA, directionB);
+
+        // not performed under assumption that A, B are orthogonal
+        //avg.normalize();
+        avg.multiplyScalar(inv_sqrt2);
+
+        quat.setFromUnitVectors(NZ, avg);
+        Y.set(0, 1, 0).applyQuaternion(quat);
+
+        // not performed under assumption that A, B are orthogonal
+        //cross.normalize();
+        this.orientation.setFromUnitVectors(Y, cross);
+
+        this.orientation.multiplyQuaternions(quat, this.orientation);
+
+      }
+
+    }
+
+    return {
+      hasOrientation: true,
+      orientation: this.orientation,
+      hasPosition: true,
+      position: this.position
+    };
+
+  };
+} )();
+
+LeapMotionPoseSensor.prototype.getPosition = function () {
+  return this.position;
+};
+
+module.exports = LeapMotionPoseSensor;
+
+},{"../three-math.js":22,"../util.js":24,"./fusion-pose-sensor.js":18}],20:[function(_dereq_,module,exports){
 /*
  * Copyright 2015 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -5153,7 +5333,7 @@ PosePredictor.prototype.getPrediction = function(currentQ, gyro, timestampS) {
 
 module.exports = PosePredictor;
 
-},{"../three-math.js":21}],20:[function(_dereq_,module,exports){
+},{"../three-math.js":22}],21:[function(_dereq_,module,exports){
 function SensorSample(sample, timestampS) {
   this.set(sample, timestampS);
 };
@@ -5169,7 +5349,7 @@ SensorSample.prototype.copy = function(sensorSample) {
 
 module.exports = SensorSample;
 
-},{}],21:[function(_dereq_,module,exports){
+},{}],22:[function(_dereq_,module,exports){
 /*
  * A subset of THREE.js, providing mostly quaternion and euler-related
  * operations, manually lifted from
@@ -7464,7 +7644,7 @@ THREE.Math = {
 
 module.exports = THREE;
 
-},{}],22:[function(_dereq_,module,exports){
+},{}],23:[function(_dereq_,module,exports){
 /*
  * Copyright 2015 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -7542,7 +7722,7 @@ TouchPanner.prototype.onTouchEnd_ = function(e) {
 
 module.exports = TouchPanner;
 
-},{"./three-math.js":21,"./util.js":23}],23:[function(_dereq_,module,exports){
+},{"./three-math.js":22,"./util.js":24}],24:[function(_dereq_,module,exports){
 /*
  * Copyright 2015 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -7732,7 +7912,7 @@ Util.isMobile = function() {
 
 module.exports = Util;
 
-},{}],24:[function(_dereq_,module,exports){
+},{}],25:[function(_dereq_,module,exports){
 /*
  * Copyright 2015 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -7933,7 +8113,7 @@ ViewerSelector.prototype.createButton_ = function(label, onclick) {
 
 module.exports = ViewerSelector;
 
-},{"./device-info.js":8,"./emitter.js":13,"./util.js":23}],25:[function(_dereq_,module,exports){
+},{"./device-info.js":8,"./emitter.js":13,"./util.js":24}],26:[function(_dereq_,module,exports){
 /*
  * Copyright 2015 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -8015,7 +8195,7 @@ function getWakeLock() {
 }
 
 module.exports = getWakeLock();
-},{"./util.js":23}],26:[function(_dereq_,module,exports){
+},{"./util.js":24}],27:[function(_dereq_,module,exports){
 /*
  * Copyright 2015 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");

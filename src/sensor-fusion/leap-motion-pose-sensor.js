@@ -86,6 +86,7 @@ function LeapMotionPoseSensor(host, port) {
   });
 
   this.leapController.connect();
+  this.position = new THREE.Vector3();
 }
 
 /**
@@ -190,7 +191,7 @@ LeapMotionPoseSensor.prototype.getState = ( function () {
       position: this.position
     };
 
-  };
+  }.bind(this);
 } )();
 
 LeapMotionPoseSensor.prototype.getPosition = function () {

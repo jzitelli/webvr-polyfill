@@ -5099,7 +5099,9 @@ var TouchPanner = _dereq_('../touch-panner.js');
 var THREE = _dereq_('../three-math.js');
 var Util = _dereq_('../util.js');
 
-function LeapMotionPoseSensor(host, port) {
+function LeapMotionPoseSensor(options) {
+  options = options || {};
+
   this.deviceId = 'webvr-polyfill:leapmotion';
   this.deviceName = 'VR Position Device (webvr-polyfill:leapmotion)';
 
@@ -5133,41 +5135,45 @@ function LeapMotionPoseSensor(host, port) {
 
   this.orientationOut_ = new Float32Array(4);
 
-  // configure leap motion host/port via url params:
-  location.search.substr(1).split("&").forEach( function(item) {
-    var kv = item.split("=");
-    if (kv[0] === 'host') {
-      host = host || decodeURIComponent(kv[1]);
+  // configure leap motion controller via url params:
+  if (options.leapController) {
+    this.leapController = options.leapController;
+  } else {
+    var host = options.host,
+        port = options.port;
+    location.search.substr(1).split("&").forEach( function(item) {
+      var kv = item.split("=");
+      if (kv[0] === 'host') {
+        host = host || decodeURIComponent(kv[1]);
+      }
+      else if (kv[0] === 'port') {
+        port = port || decodeURIComponent(kv[1]);
+      }
+    } );
+    var leapConfig = {
+      background: true
+    };
+    if (host) {
+      leapConfig.host = host;
     }
-    else if (kv[0] === 'port') {
-      port = port || decodeURIComponent(kv[1]);
+    if (port) {
+      leapConfig.port = port;
     }
-  } );
-
-  var leapConfig = {
-    background: true
-  };
-  if (host) {
-    leapConfig.host = host;
+    this.leapController = new Leap.Controller(leapConfig);
+    this.leapController.on('connect', function () {
+      console.log('LeapMotionPositionSensorVRDevice: connected to Leap Motion controller');
+    });
+    this.leapController.on('streamingStarted', function () {
+      console.log('LeapMotionPositionSensorVRDevice: streaming started');
+    });
+    this.leapController.on('streamingStopped', function () {
+      console.log('LeapMotionPositionSensorVRDevice: streaming stopped');
+    });
   }
-  if (port) {
-    leapConfig.port = port;
-  }
-
-  this.leapController = new Leap.Controller(leapConfig);
-
-  this.leapController.on('connect', function () {
-    console.log('LeapMotionPositionSensorVRDevice: connected to Leap Motion controller');
-  });
-  this.leapController.on('streamingStarted', function () {
-    console.log('LeapMotionPositionSensorVRDevice: streaming started');
-  });
-  this.leapController.on('streamingStopped', function () {
-    console.log('LeapMotionPositionSensorVRDevice: streaming stopped');
-  });
-
   this.leapController.connect();
+
   this.position = new THREE.Vector3();
+  this.quaternion = new THREE.Quaternion();
 }
 
 /**
@@ -5232,35 +5238,27 @@ LeapMotionPoseSensor.prototype.getState = ( function () {
       }
 
       if (idA !== null && idB !== null) {
-
         // set position to the average of the tips:
         this.position.set(0.0005 * (toolA.tipPosition[0] + toolB.tipPosition[0]),
                           0.0005 * (toolA.tipPosition[1] + toolB.tipPosition[1]),
                           0.0005 * (toolA.tipPosition[2] + toolB.tipPosition[2]));
-
         // determine orientation:
-        // directionA.fromArray(toolA.direction);
-        // directionB.fromArray(toolB.direction);
-
-        // cross.crossVectors(directionA, directionB);
-        // if (cross.y < 0) {
-        //   cross.negate();
-        // }
-
-        // avg.addVectors(directionA, directionB);
-
-        // // not performed under assumption that A, B are orthogonal
-        // //avg.normalize();
-        // avg.multiplyScalar(inv_sqrt2);
-
-        // quat.setFromUnitVectors(NZ, avg);
-        // Y.set(0, 1, 0).applyQuaternion(quat);
-
-        // // not performed under assumption that A, B are orthogonal
-        // //cross.normalize();
-        // this.orientation.setFromUnitVectors(Y, cross);
-
-        // this.orientation.multiplyQuaternions(quat, this.orientation);
+        directionA.fromArray(toolA.direction);
+        directionB.fromArray(toolB.direction);
+        cross.crossVectors(directionA, directionB);
+        if (cross.y < 0) {
+          cross.negate();
+        }
+        avg.addVectors(directionA, directionB);
+        // not performed under assumption that A, B are orthogonal
+        //avg.normalize();
+        avg.multiplyScalar(inv_sqrt2);
+        quat.setFromUnitVectors(NZ, avg);
+        Y.set(0, 1, 0).applyQuaternion(quat);
+        // not performed under assumption that A, B are orthogonal
+        //cross.normalize();
+        this.orientation.setFromUnitVectors(Y, cross);
+        this.orientation.multiplyQuaternions(quat, this.orientation);
       }
 
     }

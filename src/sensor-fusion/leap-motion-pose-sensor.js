@@ -54,30 +54,14 @@ function LeapMotionPoseSensor(options) {
 
   this.orientationOut_ = new Float32Array(4);
 
-  // configure leap motion controller via url params:
   if (options.leapController) {
     this.leapController = options.leapController;
   } else {
-    var host = options.host,
-        port = options.port;
-    location.search.substr(1).split("&").forEach( function(item) {
-      var kv = item.split("=");
-      if (kv[0] === 'host') {
-        host = host || decodeURIComponent(kv[1]);
-      }
-      else if (kv[0] === 'port') {
-        port = port || decodeURIComponent(kv[1]);
-      }
-    } );
     var leapConfig = {
       background: true
     };
-    if (host) {
-      leapConfig.host = host;
-    }
-    if (port) {
-      leapConfig.port = port;
-    }
+    if (options.host) leapConfig.host = options.host;
+    if (options.port) leapConfig.port = options.port;
     this.leapController = new Leap.Controller(leapConfig);
     this.leapController.on('connect', function () {
       console.log('LeapMotionPositionSensorVRDevice: connected to Leap Motion controller');
@@ -88,8 +72,8 @@ function LeapMotionPoseSensor(options) {
     this.leapController.on('streamingStopped', function () {
       console.log('LeapMotionPositionSensorVRDevice: streaming stopped');
     });
+    this.leapController.connect();
   }
-  this.leapController.connect();
 
   this.position = new THREE.Vector3();
   this.quaternion = new THREE.Quaternion();

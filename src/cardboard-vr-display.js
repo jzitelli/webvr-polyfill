@@ -53,7 +53,10 @@ function CardboardVRDisplay() {
   // Set the correct initial viewer.
   this.deviceInfo_.setViewer(this.viewerSelector_.getCurrentViewer());
 
-  this.rotateInstructions_ = new RotateInstructions();
+  this.injectPresentModeCssClass_();
+  if (!WebVRConfig.ROTATE_INSTRUCTIONS_DISABLED) {
+    this.rotateInstructions_ = new RotateInstructions();
+  }
 }
 CardboardVRDisplay.prototype = new VRDisplay();
 
@@ -117,7 +120,9 @@ CardboardVRDisplay.prototype.beginPresent_ = function() {
 
   // Provides a way to opt out of distortion
   if (this.layer_.predistorted) {
-    this.cardboardUI_ = new CardboardUI(gl);
+    if (!WebVRConfig.CARDBOARD_UI_DISABLED) {
+      this.cardboardUI_ = new CardboardUI(gl);
+    }
   } else {
     // Create a new distorter for the target context
     this.distorter_ = new CardboardDistorter(gl);
@@ -129,20 +134,24 @@ CardboardVRDisplay.prototype.beginPresent_ = function() {
     }
   }
 
-  this.cardboardUI_.listen(function() {
-    // Options clicked
-    this.viewerSelector_.show(this.layer_.source.parentElement);
-  }.bind(this), function() {
-    // Back clicked
-    this.exitPresent();
-  }.bind(this));
+  if (this.carboardUI_) {
+    this.cardboardUI_.listen(function() {
+      // Options clicked
+      this.viewerSelector_.show(this.layer_.source.parentElement);
+    }.bind(this), function() {
+      // Back clicked
+      this.exitPresent();
+    }.bind(this));
+  }
 
-  if (Util.isLandscapeMode() && Util.isMobile()) {
-    // In landscape mode, temporarily show the "put into Cardboard"
-    // interstitial. Otherwise, do the default thing.
-    this.rotateInstructions_.showTemporarily(3000, this.layer_.source.parentElement);
-  } else {
-    this.rotateInstructions_.update();
+  if (this.rotateInstructions_) {
+    if (Util.isLandscapeMode() && Util.isMobile()) {
+      // In landscape mode, temporarily show the "put into Cardboard"
+      // interstitial. Otherwise, do the default thing.
+      this.rotateInstructions_.showTemporarily(3000, this.layer_.source.parentElement);
+    } else {
+      this.rotateInstructions_.update();
+    }
   }
 
   // Listen for orientation change events in order to show interstitial.
@@ -164,7 +173,9 @@ CardboardVRDisplay.prototype.endPresent_ = function() {
     this.cardboardUI_ = null;
   }
 
-  this.rotateInstructions_.hide();
+  if (this.rotateInstructions_) {
+    this.rotateInstructions_.hide();
+  }
   this.viewerSelector_.hide();
 
   window.removeEventListener('orientationchange', this.orientationHandler);
@@ -185,7 +196,9 @@ CardboardVRDisplay.prototype.onOrientationChange_ = function(e) {
   this.viewerSelector_.hide();
 
   // Update the rotate instructions.
-  this.rotateInstructions_.update();
+  if (this.rotateInstructions_) {
+    this.rotateInstructions_.update();
+  }
 };
 
 CardboardVRDisplay.prototype.onViewerChanged_ = function(viewer) {
@@ -207,6 +220,23 @@ CardboardVRDisplay.prototype.fireVRDisplayDeviceParamsChange_ = function() {
     }
   });
   window.dispatchEvent(event);
+};
+
+CardboardVRDisplay.prototype.injectPresentModeCssClass_ = function() {
+  var cssProperties = [
+    'width: 100% !important',
+    'height: 100% !important',
+    'top: 0 !important',
+    'left: 0 !important',
+    'right: 0 !important',
+    'bottom: 0 !important',
+    'z-index: 999999 !important',
+    'position: fixed',
+  ];
+  var style = document.createElement('style');
+  style.type = 'text/css';
+  style.innerHTML = '.' + this.presentModeClassName + '{' + cssProperties.join(';') + '}';
+  document.getElementsByTagName('head')[0].appendChild(style);
 };
 
 module.exports = CardboardVRDisplay;

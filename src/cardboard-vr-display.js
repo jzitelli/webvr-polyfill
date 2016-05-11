@@ -39,8 +39,14 @@ function CardboardVRDisplay() {
   this.capabilities.canPresent = true;
 
   // "Private" members.
-  this.bufferScale_ = WebVRConfig.BUFFER_SCALE;
-  this.poseSensor_ = new FusionPoseSensor();
+  this.bufferScale_ = WebVRConfig.BUFFER_SCALE ? WebVRConfig.BUFFER_SCALE : 1.0;
+  
+  if (WebVRConfig.ENABLE_LEAP_MOTION) {
+    this.poseSensor_ = new LeapMotionPoseSensor(WebVRConfig.LEAP_MOTION_HOST, WebVRConfig.LEAP_MOTION_PORT);
+  } else {
+    this.poseSensor_ = new FusionPoseSensor();  
+  }
+
   this.distorter_ = null;
   this.cardboardUI_ = null;
 
@@ -190,8 +196,6 @@ CardboardVRDisplay.prototype.submitFrame = function(pose) {
 };
 
 CardboardVRDisplay.prototype.onOrientationChange_ = function(e) {
-  console.log('onOrientationChange_');
-
   // Hide the viewer selector.
   this.viewerSelector_.hide();
 

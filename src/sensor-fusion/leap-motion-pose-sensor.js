@@ -15,15 +15,15 @@
 var ComplementaryFilter = require('./complementary-filter.js');
 var PosePredictor = require('./pose-predictor.js');
 var TouchPanner = require('../touch-panner.js');
-var THREE = require('../three-math.js');
+var MathUtil = require('../math-util.js');
 var Util = require('../util.js');
 
 function LeapMotionPoseSensor(host, port) {
   this.deviceId = 'webvr-polyfill:leapmotion';
   this.deviceName = 'VR Position Device (webvr-polyfill:leapmotion)';
 
-  this.accelerometer = new THREE.Vector3();
-  this.gyroscope = new THREE.Vector3();
+  this.accelerometer = new MathUtil.Vector3();
+  this.gyroscope = new MathUtil.Vector3();
 
   window.addEventListener('devicemotion', this.onDeviceMotionChange_.bind(this));
   window.addEventListener('orientationchange', this.onScreenOrientationChange_.bind(this));
@@ -32,20 +32,20 @@ function LeapMotionPoseSensor(host, port) {
   this.posePredictor = new PosePredictor(WebVRConfig.PREDICTION_TIME_S || 0.040);
   this.touchPanner = new TouchPanner();
 
-  this.filterToWorldQ = new THREE.Quaternion();
+  this.filterToWorldQ = new MathUtil.Quaternion();
 
   // Set the filter to world transform, depending on OS.
   if (Util.isIOS()) {
-    this.filterToWorldQ.setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI/2);
+    this.filterToWorldQ.setFromAxisAngle(new MathUtil.Vector3(1, 0, 0), Math.PI/2);
   } else {
-    this.filterToWorldQ.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI/2);
+    this.filterToWorldQ.setFromAxisAngle(new MathUtil.Vector3(1, 0, 0), -Math.PI/2);
   }
 
-  this.worldToScreenQ = new THREE.Quaternion();
+  this.worldToScreenQ = new MathUtil.Quaternion();
   this.setScreenTransform_();
 
   // Keep track of a reset transform for resetSensor.
-  this.resetQ = new THREE.Quaternion();
+  this.resetQ = new MathUtil.Quaternion();
 
   this.isFirefoxAndroid = Util.isFirefoxAndroid();
   this.isIOS = Util.isIOS();
@@ -86,7 +86,7 @@ function LeapMotionPoseSensor(host, port) {
   });
 
   this.leapController.connect();
-  this.position = new THREE.Vector3();
+  this.position = new MathUtil.Vector3();
 }
 
 /**
@@ -98,14 +98,14 @@ LeapMotionPoseSensor.prototype.getState = ( function () {
   var toolA, idA = null;
   var toolB, idB = null;
   // normalized pointing directions of the tools:
-  var directionA = new THREE.Vector3();
-  var directionB = new THREE.Vector3();
+  var directionA = new MathUtil.Vector3();
+  var directionB = new MathUtil.Vector3();
   // used for computing orientation quaternion:
-  const NZ = new THREE.Vector3(0, 0, -1);
-  var Y = new THREE.Vector3();
-  var cross = new THREE.Vector3();
-  var avg = new THREE.Vector3();
-  var quat = new THREE.Quaternion();
+  const NZ = new MathUtil.Vector3(0, 0, -1);
+  var Y = new MathUtil.Vector3();
+  var cross = new MathUtil.Vector3();
+  var avg = new MathUtil.Vector3();
+  var quat = new MathUtil.Quaternion();
   const inv_sqrt2 = 1 / Math.sqrt(2);
 
   return function () {
@@ -207,8 +207,8 @@ LeapMotionPoseSensor.prototype.getOrientation = function () {
   // Predict orientation.
   this.predictedQ = this.posePredictor.getPrediction(orientation, this.gyroscope, this.previousTimestampS);
 
-  // Convert to THREE coordinate system: -Z forward, Y up, X right.
-  var out = new THREE.Quaternion();
+  // Convert to MathUtil coordinate system: -Z forward, Y up, X right.
+  var out = new MathUtil.Quaternion();
   out.copy(this.filterToWorldQ);
   out.multiply(this.resetQ);
   if (!WebVRConfig.TOUCH_PANNER_DISABLED) {
@@ -288,10 +288,10 @@ LeapMotionPoseSensor.prototype.setScreenTransform_ = function() {
     case 0:
       break;
     case 90:
-      this.worldToScreenQ.setFromAxisAngle(new THREE.Vector3(0, 0, 1), -Math.PI/2);
+      this.worldToScreenQ.setFromAxisAngle(new MathUtil.Vector3(0, 0, 1), -Math.PI/2);
       break;
     case -90:
-      this.worldToScreenQ.setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI/2);
+      this.worldToScreenQ.setFromAxisAngle(new MathUtil.Vector3(0, 0, 1), Math.PI/2);
       break;
     case 180:
       // TODO.

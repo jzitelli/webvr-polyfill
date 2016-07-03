@@ -59,9 +59,13 @@ function CardboardVRDisplay() {
   // Set the correct initial viewer.
   this.deviceInfo_.setViewer(this.viewerSelector_.getCurrentViewer());
 
-  this.injectPresentModeCssClass_();
   if (!WebVRConfig.ROTATE_INSTRUCTIONS_DISABLED) {
     this.rotateInstructions_ = new RotateInstructions();
+  }
+
+  if (Util.isIOS()) {
+    // Listen for resize events to workaround this awful Safari bug.
+    window.addEventListener('resize', this.onResize_.bind(this));
   }
 }
 CardboardVRDisplay.prototype = new VRDisplay();
@@ -127,6 +131,8 @@ CardboardVRDisplay.prototype.beginPresent_ = function() {
   // Provides a way to opt out of distortion
   if (this.layer_.predistorted) {
     if (!WebVRConfig.CARDBOARD_UI_DISABLED) {
+      gl.canvas.width = Util.getScreenWidth() * this.bufferScale_;
+      gl.canvas.height = Util.getScreenHeight() * this.bufferScale_;
       this.cardboardUI_ = new CardboardUI(gl);
     }
   } else {
@@ -140,13 +146,17 @@ CardboardVRDisplay.prototype.beginPresent_ = function() {
     }
   }
 
-  if (this.carboardUI_) {
-    this.cardboardUI_.listen(function() {
-      // Options clicked
+  if (this.cardboardUI_) {
+    this.cardboardUI_.listen(function(e) {
+      // Options clicked.
       this.viewerSelector_.show(this.layer_.source.parentElement);
-    }.bind(this), function() {
-      // Back clicked
+      e.stopPropagation();
+      e.preventDefault();
+    }.bind(this), function(e) {
+      // Back clicked.
       this.exitPresent();
+      e.stopPropagation();
+      e.preventDefault();
     }.bind(this));
   }
 
@@ -190,7 +200,16 @@ CardboardVRDisplay.prototype.endPresent_ = function() {
 CardboardVRDisplay.prototype.submitFrame = function(pose) {
   if (this.distorter_) {
     this.distorter_.submitFrame();
-  } else if (this.cardboardUI_) {
+  } else if (this.cardboardUI_ && this.layer_) {
+    // Hack for predistorted: true.
+    var canvas = this.layer_.source.getContext('webgl').canvas;
+    if (canvas.width != this.lastWidth || canvas.height != this.lastHeight) {
+      this.cardboardUI_.onResize();
+    }
+    this.lastWidth = canvas.width;
+    this.lastHeight = canvas.height;
+
+    // Render the Cardboard UI.
     this.cardboardUI_.render();
   }
 };
@@ -203,13 +222,41 @@ CardboardVRDisplay.prototype.onOrientationChange_ = function(e) {
   if (this.rotateInstructions_) {
     this.rotateInstructions_.update();
   }
+
+  this.onResize_();
+};
+
+CardboardVRDisplay.prototype.onResize_ = function(e) {
+  if (this.layer_) {
+    var gl = this.layer_.source.getContext('webgl');
+    // Size the CSS canvas.
+    // Added padding on right and bottom because iPhone 5 will not
+    // hide the URL bar unless content is bigger than the screen.
+    // This will not be visible as long as the container element (e.g. body)
+    // is set to 'overflow: hidden'.
+    var cssProperties = [
+      'position: absolute',
+      'top: 0',
+      'left: 0',
+      'width: ' + Math.max(screen.width, screen.height) + 'px',
+      'height: ' + Math.min(screen.height, screen.width) + 'px',
+      'border: 0',
+      'margin: 0',
+      'padding: 0 10px 10px 0',
+    ];
+    gl.canvas.setAttribute('style', cssProperties.join('; ') + ';');
+
+    Util.safariCssSizeWorkaround(gl.canvas);
+  }
 };
 
 CardboardVRDisplay.prototype.onViewerChanged_ = function(viewer) {
   this.deviceInfo_.setViewer(viewer);
 
-  // Update the distortion appropriately.
-  this.distorter_.updateDeviceInfo(this.deviceInfo_);
+  if (this.distorter_) {
+    // Update the distortion appropriately.
+    this.distorter_.updateDeviceInfo(this.deviceInfo_);
+  }
 
   // Fire a new event containing viewer and device parameters for clients that
   // want to implement their own geometry-based distortion.
@@ -224,23 +271,6 @@ CardboardVRDisplay.prototype.fireVRDisplayDeviceParamsChange_ = function() {
     }
   });
   window.dispatchEvent(event);
-};
-
-CardboardVRDisplay.prototype.injectPresentModeCssClass_ = function() {
-  var cssProperties = [
-    'width: 100% !important',
-    'height: 100% !important',
-    'top: 0 !important',
-    'left: 0 !important',
-    'right: 0 !important',
-    'bottom: 0 !important',
-    'z-index: 999999 !important',
-    'position: fixed',
-  ];
-  var style = document.createElement('style');
-  style.type = 'text/css';
-  style.innerHTML = '.' + this.presentModeClassName + '{' + cssProperties.join(';') + '}';
-  document.getElementsByTagName('head')[0].appendChild(style);
 };
 
 module.exports = CardboardVRDisplay;

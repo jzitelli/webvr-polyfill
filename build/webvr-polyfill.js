@@ -5,7 +5,7 @@
  * @copyright Copyright (c) 2014 Yehuda Katz, Tom Dale, Stefan Penner and contributors (Conversion to ES6 API by Jake Archibald)
  * @license   Licensed under MIT license
  *            See https://raw.githubusercontent.com/jakearchibald/es6-promise/master/LICENSE
- * @version   3.1.2
+ * @version   3.2.1
  */
 
 (function() {
@@ -63,7 +63,7 @@
     var lib$es6$promise$asap$$browserWindow = (typeof window !== 'undefined') ? window : undefined;
     var lib$es6$promise$asap$$browserGlobal = lib$es6$promise$asap$$browserWindow || {};
     var lib$es6$promise$asap$$BrowserMutationObserver = lib$es6$promise$asap$$browserGlobal.MutationObserver || lib$es6$promise$asap$$browserGlobal.WebKitMutationObserver;
-    var lib$es6$promise$asap$$isNode = typeof process !== 'undefined' && {}.toString.call(process) === '[object process]';
+    var lib$es6$promise$asap$$isNode = typeof self === 'undefined' && typeof process !== 'undefined' && {}.toString.call(process) === '[object process]';
 
     // test for web worker but not in IE10
     var lib$es6$promise$asap$$isWorker = typeof Uint8ClampedArray !== 'undefined' &&
@@ -153,19 +153,19 @@
     }
     function lib$es6$promise$then$$then(onFulfillment, onRejection) {
       var parent = this;
-      var state = parent._state;
-
-      if (state === lib$es6$promise$$internal$$FULFILLED && !onFulfillment || state === lib$es6$promise$$internal$$REJECTED && !onRejection) {
-        return this;
-      }
 
       var child = new this.constructor(lib$es6$promise$$internal$$noop);
-      var result = parent._result;
+
+      if (child[lib$es6$promise$$internal$$PROMISE_ID] === undefined) {
+        lib$es6$promise$$internal$$makePromise(child);
+      }
+
+      var state = parent._state;
 
       if (state) {
         var callback = arguments[state - 1];
         lib$es6$promise$asap$$asap(function(){
-          lib$es6$promise$$internal$$invokeCallback(state, child, callback, result);
+          lib$es6$promise$$internal$$invokeCallback(state, child, callback, parent._result);
         });
       } else {
         lib$es6$promise$$internal$$subscribe(parent, child, onFulfillment, onRejection);
@@ -187,6 +187,7 @@
       return promise;
     }
     var lib$es6$promise$promise$resolve$$default = lib$es6$promise$promise$resolve$$resolve;
+    var lib$es6$promise$$internal$$PROMISE_ID = Math.random().toString(36).substring(16);
 
     function lib$es6$promise$$internal$$noop() {}
 
@@ -417,6 +418,18 @@
       }
     }
 
+    var lib$es6$promise$$internal$$id = 0;
+    function lib$es6$promise$$internal$$nextId() {
+      return lib$es6$promise$$internal$$id++;
+    }
+
+    function lib$es6$promise$$internal$$makePromise(promise) {
+      promise[lib$es6$promise$$internal$$PROMISE_ID] = lib$es6$promise$$internal$$id++;
+      promise._state = undefined;
+      promise._result = undefined;
+      promise._subscribers = [];
+    }
+
     function lib$es6$promise$promise$all$$all(entries) {
       return new lib$es6$promise$enumerator$$default(this, entries).promise;
     }
@@ -425,28 +438,18 @@
       /*jshint validthis:true */
       var Constructor = this;
 
-      var promise = new Constructor(lib$es6$promise$$internal$$noop);
-
       if (!lib$es6$promise$utils$$isArray(entries)) {
-        lib$es6$promise$$internal$$reject(promise, new TypeError('You must pass an array to race.'));
-        return promise;
+        return new Constructor(function(resolve, reject) {
+          reject(new TypeError('You must pass an array to race.'));
+        });
+      } else {
+        return new Constructor(function(resolve, reject) {
+          var length = entries.length;
+          for (var i = 0; i < length; i++) {
+            Constructor.resolve(entries[i]).then(resolve, reject);
+          }
+        });
       }
-
-      var length = entries.length;
-
-      function onFulfillment(value) {
-        lib$es6$promise$$internal$$resolve(promise, value);
-      }
-
-      function onRejection(reason) {
-        lib$es6$promise$$internal$$reject(promise, reason);
-      }
-
-      for (var i = 0; promise._state === lib$es6$promise$$internal$$PENDING && i < length; i++) {
-        lib$es6$promise$$internal$$subscribe(Constructor.resolve(entries[i]), undefined, onFulfillment, onRejection);
-      }
-
-      return promise;
     }
     var lib$es6$promise$promise$race$$default = lib$es6$promise$promise$race$$race;
     function lib$es6$promise$promise$reject$$reject(reason) {
@@ -458,7 +461,6 @@
     }
     var lib$es6$promise$promise$reject$$default = lib$es6$promise$promise$reject$$reject;
 
-    var lib$es6$promise$promise$$counter = 0;
 
     function lib$es6$promise$promise$$needsResolver() {
       throw new TypeError('You must pass a resolver function as the first argument to the promise constructor');
@@ -573,9 +575,8 @@
       @constructor
     */
     function lib$es6$promise$promise$$Promise(resolver) {
-      this._id = lib$es6$promise$promise$$counter++;
-      this._state = undefined;
-      this._result = undefined;
+      this[lib$es6$promise$$internal$$PROMISE_ID] = lib$es6$promise$$internal$$nextId();
+      this._result = this._state = undefined;
       this._subscribers = [];
 
       if (lib$es6$promise$$internal$$noop !== resolver) {
@@ -826,7 +827,11 @@
       this._instanceConstructor = Constructor;
       this.promise = new Constructor(lib$es6$promise$$internal$$noop);
 
-      if (Array.isArray(input)) {
+      if (!this.promise[lib$es6$promise$$internal$$PROMISE_ID]) {
+        lib$es6$promise$$internal$$makePromise(this.promise);
+      }
+
+      if (lib$es6$promise$utils$$isArray(input)) {
         this._input     = input;
         this.length     = input.length;
         this._remaining = input.length;
@@ -843,13 +848,13 @@
           }
         }
       } else {
-        lib$es6$promise$$internal$$reject(this.promise, this._validationError());
+        lib$es6$promise$$internal$$reject(this.promise, lib$es6$promise$enumerator$$validationError());
       }
     }
 
-    lib$es6$promise$enumerator$$Enumerator.prototype._validationError = function() {
+    function lib$es6$promise$enumerator$$validationError() {
       return new Error('Array Methods must be provided an Array');
-    };
+    }
 
     lib$es6$promise$enumerator$$Enumerator.prototype._enumerate = function() {
       var length  = this.length;
@@ -957,8 +962,8 @@
 
 }).call(this,_dereq_('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"_process":3}],2:[function(_dereq_,module,exports){
-/* eslint-disable no-unused-vars */
 'use strict';
+/* eslint-disable no-unused-vars */
 var hasOwnProperty = Object.prototype.hasOwnProperty;
 var propIsEnumerable = Object.prototype.propertyIsEnumerable;
 
@@ -970,7 +975,51 @@ function toObject(val) {
 	return Object(val);
 }
 
-module.exports = Object.assign || function (target, source) {
+function shouldUseNative() {
+	try {
+		if (!Object.assign) {
+			return false;
+		}
+
+		// Detect buggy property enumeration order in older V8 versions.
+
+		// https://bugs.chromium.org/p/v8/issues/detail?id=4118
+		var test1 = new String('abc');  // eslint-disable-line
+		test1[5] = 'de';
+		if (Object.getOwnPropertyNames(test1)[0] === '5') {
+			return false;
+		}
+
+		// https://bugs.chromium.org/p/v8/issues/detail?id=3056
+		var test2 = {};
+		for (var i = 0; i < 10; i++) {
+			test2['_' + String.fromCharCode(i)] = i;
+		}
+		var order2 = Object.getOwnPropertyNames(test2).map(function (n) {
+			return test2[n];
+		});
+		if (order2.join('') !== '0123456789') {
+			return false;
+		}
+
+		// https://bugs.chromium.org/p/v8/issues/detail?id=3056
+		var test3 = {};
+		'abcdefghijklmnopqrst'.split('').forEach(function (letter) {
+			test3[letter] = letter;
+		});
+		if (Object.keys(Object.assign({}, test3)).join('') !==
+				'abcdefghijklmnopqrst') {
+			return false;
+		}
+
+		return true;
+	} catch (e) {
+		// We don't expect any of the above to throw, but better to be safe.
+		return false;
+	}
+}
+
+module.exports = shouldUseNative() ? Object.assign : function (target, source) {
 	var from;
 	var to = toObject(target);
 	var symbols;
@@ -1001,12 +1050,40 @@ module.exports = Object.assign || function (target, source) {
 // shim for using process in browser
 
 var process = module.exports = {};
+
+// cached from whatever global is present so that test runners that stub it
+// don't break things.  But we need to wrap it in a try catch in case it is
+// wrapped in strict mode code which doesn't define any globals.  It's inside a
+// function because try/catches deoptimize in certain engines.
+
+var cachedSetTimeout;
+var cachedClearTimeout;
+
+(function () {
+  try {
+    cachedSetTimeout = setTimeout;
+  } catch (e) {
+    cachedSetTimeout = function () {
+      throw new Error('setTimeout is not defined');
+    }
+  }
+  try {
+    cachedClearTimeout = clearTimeout;
+  } catch (e) {
+    cachedClearTimeout = function () {
+      throw new Error('clearTimeout is not defined');
+    }
+  }
+} ())
 var queue = [];
 var draining = false;
 var currentQueue;
 var queueIndex = -1;
 
 function cleanUpNextTick() {
+    if (!draining || !currentQueue) {
+        return;
+    }
     draining = false;
     if (currentQueue.length) {
         queue = currentQueue.concat(queue);
@@ -1022,7 +1099,7 @@ function drainQueue() {
     if (draining) {
         return;
     }
-    var timeout = setTimeout(cleanUpNextTick);
+    var timeout = cachedSetTimeout(cleanUpNextTick);
     draining = true;
 
     var len = queue.length;
@@ -1039,7 +1116,7 @@ function drainQueue() {
     }
     currentQueue = null;
     draining = false;
-    clearTimeout(timeout);
+    cachedClearTimeout(timeout);
 }
 
 process.nextTick = function (fun) {
@@ -1051,7 +1128,7 @@ process.nextTick = function (fun) {
     }
     queue.push(new Item(fun, args));
     if (queue.length === 1 && !draining) {
-        setTimeout(drainQueue, 0);
+        cachedSetTimeout(drainQueue, 0);
     }
 };
 
@@ -1281,7 +1358,9 @@ VRDisplay.prototype.requestPresent = function(layers) {
         self.isPresenting = (fullscreenElement === actualFullscreenElement);
         if (self.isPresenting) {
           if (screen.orientation && screen.orientation.lock) {
-            screen.orientation.lock('landscape-primary');
+            screen.orientation.lock('landscape-primary').catch(function(error){
+                    console.error('screen.orientation.lock() failed due to', error.message)
+            });
           }
           self.waitingForPresent_ = false;
           self.beginPresent_();
@@ -1467,7 +1546,7 @@ module.exports.VRDevice = VRDevice;
 module.exports.HMDVRDevice = HMDVRDevice;
 module.exports.PositionSensorVRDevice = PositionSensorVRDevice;
 
-},{"./util.js":24,"./wakelock.js":26}],5:[function(_dereq_,module,exports){
+},{"./util.js":25,"./wakelock.js":27}],5:[function(_dereq_,module,exports){
 /*
  * Copyright 2016 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -2115,7 +2194,7 @@ CardboardDistorter.prototype.getOwnPropertyDescriptor_ = function(proto, attrNam
 
 module.exports = CardboardDistorter;
 
-},{"./cardboard-ui.js":6,"./deps/wglu-preserve-state.js":8,"./util.js":24}],6:[function(_dereq_,module,exports){
+},{"./cardboard-ui.js":6,"./deps/wglu-preserve-state.js":8,"./util.js":25}],6:[function(_dereq_,module,exports){
 /*
  * Copyright 2016 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -2403,7 +2482,7 @@ CardboardUI.prototype.renderNoState = function() {
 
 module.exports = CardboardUI;
 
-},{"./deps/wglu-preserve-state.js":8,"./util.js":24}],7:[function(_dereq_,module,exports){
+},{"./deps/wglu-preserve-state.js":8,"./util.js":25}],7:[function(_dereq_,module,exports){
 /*
  * Copyright 2016 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -2424,6 +2503,7 @@ var CardboardUI = _dereq_('./cardboard-ui.js');
 var DeviceInfo = _dereq_('./device-info.js');
 var Dpdb = _dereq_('./dpdb/dpdb.js');
 var FusionPoseSensor = _dereq_('./sensor-fusion/fusion-pose-sensor.js');
+var LeapMotionPoseSensor = _dereq_('./sensor-fusion/leap-motion-pose-sensor.js');
 var RotateInstructions = _dereq_('./rotate-instructions.js');
 var ViewerSelector = _dereq_('./viewer-selector.js');
 var VRDisplay = _dereq_('./base.js').VRDisplay;
@@ -2444,8 +2524,14 @@ function CardboardVRDisplay() {
   this.capabilities.canPresent = true;
 
   // "Private" members.
-  this.bufferScale_ = WebVRConfig.BUFFER_SCALE;
-  this.poseSensor_ = new FusionPoseSensor();
+  this.bufferScale_ = WebVRConfig.BUFFER_SCALE ? WebVRConfig.BUFFER_SCALE : 1.0;
+  
+  if (WebVRConfig.ENABLE_LEAP_MOTION) {
+    this.poseSensor_ = new LeapMotionPoseSensor(WebVRConfig.LEAP_MOTION_HOST, WebVRConfig.LEAP_MOTION_PORT);
+  } else {
+    this.poseSensor_ = new FusionPoseSensor();  
+  }
+
   this.distorter_ = null;
   this.cardboardUI_ = null;
 
@@ -2614,8 +2700,6 @@ CardboardVRDisplay.prototype.submitFrame = function(pose) {
 };
 
 CardboardVRDisplay.prototype.onOrientationChange_ = function(e) {
-  console.log('onOrientationChange_');
-
   // Hide the viewer selector.
   this.viewerSelector_.hide();
 
@@ -2676,7 +2760,7 @@ CardboardVRDisplay.prototype.fireVRDisplayDeviceParamsChange_ = function() {
 
 module.exports = CardboardVRDisplay;
 
-},{"./base.js":4,"./cardboard-distorter.js":5,"./cardboard-ui.js":6,"./device-info.js":9,"./dpdb/dpdb.js":13,"./rotate-instructions.js":18,"./sensor-fusion/fusion-pose-sensor.js":20,"./util.js":24,"./viewer-selector.js":25}],8:[function(_dereq_,module,exports){
+},{"./base.js":4,"./cardboard-distorter.js":5,"./cardboard-ui.js":6,"./device-info.js":9,"./dpdb/dpdb.js":13,"./rotate-instructions.js":18,"./sensor-fusion/fusion-pose-sensor.js":20,"./sensor-fusion/leap-motion-pose-sensor.js":21,"./util.js":25,"./viewer-selector.js":26}],8:[function(_dereq_,module,exports){
 /*
 Copyright (c) 2016, Brandon Jones.
 
@@ -2911,6 +2995,18 @@ var Viewers = {
     inverseCoefficients: [-0.33836704, -0.18162185, 0.862655, -1.2462051,
       1.0560602, -0.58208317, 0.21609078, -0.05444823, 0.009177956,
       -9.904169E-4, 6.183535E-5, -1.6981803E-6]
+  }),
+  DestekV2: new CardboardViewer({
+    id: 'DestekV2',
+    label: 'Destek 2015',
+    fov: 40,
+    interLensDistance: 0.061,
+    baselineLensDistance: 0.034,
+    screenLensDistance: 0.045,
+    distortionCoefficients: [0.07, 0.04],
+    inverseCoefficients: [-0.33836704, -0.18162185, 0.862655, -1.2462051,
+      1.0560602, -0.58208317, 0.21609078, -0.05444823, 0.009177956,
+      -9.904169E-4, 6.183535E-5, -1.6981803E-6] // CHECK: are inverseCoefficients used?
   })
 };
 
@@ -3208,7 +3304,7 @@ function CardboardViewer(params) {
 DeviceInfo.Viewers = Viewers;
 module.exports = DeviceInfo;
 
-},{"./distortion/distortion.js":11,"./math-util.js":16,"./util.js":24}],10:[function(_dereq_,module,exports){
+},{"./distortion/distortion.js":11,"./math-util.js":16,"./util.js":25}],10:[function(_dereq_,module,exports){
 /*
  * Copyright 2016 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -4644,7 +4740,7 @@ function DeviceParams(params) {
 }
 
 module.exports = Dpdb;
-},{"../util.js":24,"./dpdb-cache.js":12}],14:[function(_dereq_,module,exports){
+},{"../util.js":25,"./dpdb-cache.js":12}],14:[function(_dereq_,module,exports){
 /*
  * Copyright 2015 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -4765,7 +4861,7 @@ if (!window.WebVRConfig.DEFER_INITIALIZATION) {
   }
 }
 
-},{"./util.js":24,"./webvr-polyfill.js":27}],16:[function(_dereq_,module,exports){
+},{"./util.js":25,"./webvr-polyfill.js":28}],16:[function(_dereq_,module,exports){
 /*
  * Copyright 2016 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -5162,7 +5258,9 @@ function MouseKeyboardVRDisplay() {
   this.capabilities.hasOrientation = true;
 
   // Attach to mouse and keyboard events.
-  window.addEventListener('keydown', this.onKeyDown_.bind(this));
+  if (!WebVRConfig.KEYBOARD_CONTROLS_DISABLED) {
+    window.addEventListener('keydown', this.onKeyDown_.bind(this));
+  }
   window.addEventListener('mousemove', this.onMouseMove_.bind(this));
   window.addEventListener('mousedown', this.onMouseDown_.bind(this));
   window.addEventListener('mouseup', this.onMouseUp_.bind(this));
@@ -5303,7 +5401,7 @@ MouseKeyboardVRDisplay.prototype.resetPose = function() {
 
 module.exports = MouseKeyboardVRDisplay;
 
-},{"./base.js":4,"./math-util.js":16,"./util.js":24}],18:[function(_dereq_,module,exports){
+},{"./base.js":4,"./math-util.js":16,"./util.js":25}],18:[function(_dereq_,module,exports){
 /*
  * Copyright 2015 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -5449,7 +5547,7 @@ RotateInstructions.prototype.loadIcon_ = function() {
 
 module.exports = RotateInstructions;
 
-},{"./util.js":24}],19:[function(_dereq_,module,exports){
+},{"./util.js":25}],19:[function(_dereq_,module,exports){
 /*
  * Copyright 2015 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -5617,7 +5715,7 @@ ComplementaryFilter.prototype.gyroToQuaternionDelta_ = function(gyro, dt) {
 
 module.exports = ComplementaryFilter;
 
-},{"../math-util.js":16,"../util.js":24,"./sensor-sample.js":22}],20:[function(_dereq_,module,exports){
+},{"../math-util.js":16,"../util.js":25,"./sensor-sample.js":23}],20:[function(_dereq_,module,exports){
 /*
  * Copyright 2015 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -5749,18 +5847,20 @@ FusionPoseSensor.prototype.onDeviceMotionChange_ = function(deviceMotion) {
   var rotRate = deviceMotion.rotationRate;
   var timestampS = deviceMotion.timeStamp / 1000;
 
-  // Firefox Android timeStamp returns one thousandth of a millisecond.
+  // Firefox Android timeStamp returns seconds.
   if (this.isFirefoxAndroid) {
     timestampS /= 1000;
   }
 
   var deltaS = timestampS - this.previousTimestampS;
+  this.previousTimestampS = timestampS;
+
   if (deltaS <= Util.MIN_TIMESTEP || deltaS > Util.MAX_TIMESTEP) {
     console.warn('Invalid timestamps detected. Time step between successive ' +
-                 'gyroscope sensor samples is very small or not monotonic');
-    this.previousTimestampS = timestampS;
+                 'gyroscope sensor samples is very small or not monotonic: ' + deltaS);
     return;
   }
+
   this.accelerometer.set(-accGravity.x, -accGravity.y, -accGravity.z);
   this.gyroscope.set(rotRate.alpha, rotRate.beta, rotRate.gamma);
 
@@ -5772,8 +5872,6 @@ FusionPoseSensor.prototype.onDeviceMotionChange_ = function(deviceMotion) {
 
   this.filter.addAccelMeasurement(this.accelerometer, timestampS);
   this.filter.addGyroMeasurement(this.gyroscope, timestampS);
-
-  this.previousTimestampS = timestampS;
 };
 
 FusionPoseSensor.prototype.onScreenOrientationChange_ =
@@ -5802,7 +5900,311 @@ FusionPoseSensor.prototype.setScreenTransform_ = function() {
 
 module.exports = FusionPoseSensor;
 
-},{"../math-util.js":16,"../touch-panner.js":23,"../util.js":24,"./complementary-filter.js":19,"./pose-predictor.js":21}],21:[function(_dereq_,module,exports){
+},{"../math-util.js":16,"../touch-panner.js":24,"../util.js":25,"./complementary-filter.js":19,"./pose-predictor.js":22}],21:[function(_dereq_,module,exports){
+/*
+ * Copyright 2015 Google Inc. All Rights Reserved.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+var ComplementaryFilter = _dereq_('./complementary-filter.js');
+var PosePredictor = _dereq_('./pose-predictor.js');
+var TouchPanner = _dereq_('../touch-panner.js');
+var MathUtil = _dereq_('../math-util.js');
+var Util = _dereq_('../util.js');
+
+function LeapMotionPoseSensor(host, port) {
+  this.deviceId = 'webvr-polyfill:leapmotion';
+  this.deviceName = 'VR Position Device (webvr-polyfill:leapmotion)';
+
+  this.accelerometer = new MathUtil.Vector3();
+  this.gyroscope = new MathUtil.Vector3();
+
+  window.addEventListener('devicemotion', this.onDeviceMotionChange_.bind(this));
+  window.addEventListener('orientationchange', this.onScreenOrientationChange_.bind(this));
+
+  this.filter = new ComplementaryFilter(WebVRConfig.K_FILTER || 0.98);
+  this.posePredictor = new PosePredictor(WebVRConfig.PREDICTION_TIME_S || 0.040);
+  this.touchPanner = new TouchPanner();
+
+  this.filterToWorldQ = new MathUtil.Quaternion();
+
+  // Set the filter to world transform, depending on OS.
+  if (Util.isIOS()) {
+    this.filterToWorldQ.setFromAxisAngle(new MathUtil.Vector3(1, 0, 0), Math.PI/2);
+  } else {
+    this.filterToWorldQ.setFromAxisAngle(new MathUtil.Vector3(1, 0, 0), -Math.PI/2);
+  }
+
+  this.worldToScreenQ = new MathUtil.Quaternion();
+  this.setScreenTransform_();
+
+  // Keep track of a reset transform for resetSensor.
+  this.resetQ = new MathUtil.Quaternion();
+
+  this.isFirefoxAndroid = Util.isFirefoxAndroid();
+  this.isIOS = Util.isIOS();
+
+  this.orientationOut_ = new Float32Array(4);
+
+  // configure leap motion host/port via url params:
+  location.search.substr(1).split("&").forEach( function(item) {
+    var kv = item.split("=");
+    if (kv[0] === 'host') {
+      host = host || decodeURIComponent(kv[1]);
+    }
+    else if (kv[0] === 'port') {
+      port = port || decodeURIComponent(kv[1]);
+    }
+  } );
+
+  var leapConfig = {
+    background: true
+  };
+  if (host) {
+    leapConfig.host = host;
+  }
+  if (port) {
+    leapConfig.port = port;
+  }
+
+  this.leapController = new Leap.Controller(leapConfig);
+
+  this.leapController.on('connect', function () {
+    console.log('LeapMotionPositionSensorVRDevice: connected to Leap Motion controller');
+  });
+  this.leapController.on('streamingStarted', function () {
+    console.log('LeapMotionPositionSensorVRDevice: streaming started');
+  });
+  this.leapController.on('streamingStopped', function () {
+    console.log('LeapMotionPositionSensorVRDevice: streaming stopped');
+  });
+
+  this.leapController.connect();
+  this.position = new MathUtil.Vector3();
+}
+
+/**
+ * Returns {orientation: {x,y,z,w}, position: {x,y,z}}.
+ */
+LeapMotionPoseSensor.prototype.getState = ( function () {
+  var lastFrameID;
+  // tool ids:
+  var toolA, idA = null;
+  var toolB, idB = null;
+  // normalized pointing directions of the tools:
+  var directionA = new MathUtil.Vector3();
+  var directionB = new MathUtil.Vector3();
+  // used for computing orientation quaternion:
+  const NZ = new MathUtil.Vector3(0, 0, -1);
+  var Y = new MathUtil.Vector3();
+  var cross = new MathUtil.Vector3();
+  var avg = new MathUtil.Vector3();
+  var quat = new MathUtil.Quaternion();
+  const inv_sqrt2 = 1 / Math.sqrt(2);
+
+  return function () {
+
+    // Update state if new Leap Motion frame is available.
+    var frame = this.leapController.frame();
+    if (frame.valid && frame.id != lastFrameID) {
+
+      lastFrameID = frame.id;
+
+      // manage tool IDs:
+      if (idA !== null) {
+        // A was tracking, try to find it again
+        toolA = frame.tool(idA);
+        if (!toolA.valid) {
+          // A is lost
+          idA = null;
+        }
+      }
+      if (idB !== null) {
+        // B was tracking, try to find it again
+        toolB = frame.tool(idB);
+        if (!toolB.valid) {
+          // B is lost
+          idB = null;
+        }
+      }
+      if (frame.tools.length === 1) {
+        if (idA === null && idB === null) {
+          // start tracking A
+          toolA = frame.tools[0];
+          idA = toolA.id;
+        }
+      } else if (frame.tools.length === 2) {
+        if (idA !== null && idB === null) {
+          // start tracking B
+          toolB = (frame.tools[0].id === idA ? frame.tools[1] : frame.tools[0]);
+          idB = toolB.id;
+        } else if (idB !== null && idA === null) {
+          toolA = (frame.tools[0].id === idB ? frame.tools[1] : frame.tools[1]);
+          idA = toolA.id;
+        }
+      }
+
+      if (idA !== null && idB !== null) {
+
+        // set position to the average of the tips:
+        this.position.set(0.0005 * (toolA.tipPosition[0] + toolB.tipPosition[0]),
+                          0.0005 * (toolA.tipPosition[1] + toolB.tipPosition[1]),
+                          0.0005 * (toolA.tipPosition[2] + toolB.tipPosition[2]));
+
+        // determine orientation:
+        // directionA.fromArray(toolA.direction);
+        // directionB.fromArray(toolB.direction);
+
+        // cross.crossVectors(directionA, directionB);
+        // if (cross.y < 0) {
+        //   cross.negate();
+        // }
+
+        // avg.addVectors(directionA, directionB);
+
+        // // not performed under assumption that A, B are orthogonal
+        // //avg.normalize();
+        // avg.multiplyScalar(inv_sqrt2);
+
+        // quat.setFromUnitVectors(NZ, avg);
+        // Y.set(0, 1, 0).applyQuaternion(quat);
+
+        // // not performed under assumption that A, B are orthogonal
+        // //cross.normalize();
+        // this.orientation.setFromUnitVectors(Y, cross);
+
+        // this.orientation.multiplyQuaternions(quat, this.orientation);
+      }
+
+    }
+
+    return {
+      hasOrientation: true,
+      orientation: this.orientation,
+      hasPosition: true,
+      position: this.position
+    };
+
+  };
+} )();
+
+LeapMotionPoseSensor.prototype.getPosition = function () {
+  var position = this.getState().position;
+  return [position.x, position.y, position.z];
+};
+
+LeapMotionPoseSensor.prototype.getOrientation = function () {
+  // Convert from filter space to the the same system used by the
+  // deviceorientation event.
+  var orientation = this.filter.getOrientation();
+
+  // Predict orientation.
+  this.predictedQ = this.posePredictor.getPrediction(orientation, this.gyroscope, this.previousTimestampS);
+
+  // Convert to MathUtil coordinate system: -Z forward, Y up, X right.
+  var out = new MathUtil.Quaternion();
+  out.copy(this.filterToWorldQ);
+  out.multiply(this.resetQ);
+  if (!WebVRConfig.TOUCH_PANNER_DISABLED) {
+    out.multiply(this.touchPanner.getOrientation());
+  }
+  out.multiply(this.predictedQ);
+  out.multiply(this.worldToScreenQ);
+
+  // Handle the yaw-only case.
+  if (WebVRConfig.YAW_ONLY) {
+    // Make a quaternion that only turns around the Y-axis.
+    out.x = 0;
+    out.z = 0;
+    out.normalize();
+  }
+
+  this.orientationOut_[0] = out.x;
+  this.orientationOut_[1] = out.y;
+  this.orientationOut_[2] = out.z;
+  this.orientationOut_[3] = out.w;
+  return this.orientationOut_;
+};
+
+LeapMotionPoseSensor.prototype.resetPose = function() {
+  // Reduce to inverted yaw-only
+  this.resetQ.copy(this.filter.getOrientation());
+  this.resetQ.x = 0;
+  this.resetQ.y = 0;
+  this.resetQ.z *= -1;
+  this.resetQ.normalize();
+
+  if (!WebVRConfig.TOUCH_PANNER_DISABLED) {
+    this.touchPanner.resetSensor();
+  }
+};
+
+LeapMotionPoseSensor.prototype.onDeviceMotionChange_ = function(deviceMotion) {
+  var accGravity = deviceMotion.accelerationIncludingGravity;
+  var rotRate = deviceMotion.rotationRate;
+  var timestampS = deviceMotion.timeStamp / 1000;
+
+  // Firefox Android timeStamp returns one thousandth of a millisecond.
+  if (this.isFirefoxAndroid) {
+    timestampS /= 1000;
+  }
+
+  var deltaS = timestampS - this.previousTimestampS;
+  if (deltaS <= Util.MIN_TIMESTEP || deltaS > Util.MAX_TIMESTEP) {
+    console.warn('Invalid timestamps detected. Time step between successive ' +
+                 'gyroscope sensor samples is very small or not monotonic');
+    this.previousTimestampS = timestampS;
+    return;
+  }
+  this.accelerometer.set(-accGravity.x, -accGravity.y, -accGravity.z);
+  this.gyroscope.set(rotRate.alpha, rotRate.beta, rotRate.gamma);
+
+  // With iOS and Firefox Android, rotationRate is reported in degrees,
+  // so we first convert to radians.
+  if (this.isIOS || this.isFirefoxAndroid) {
+    this.gyroscope.multiplyScalar(Math.PI / 180);
+  }
+
+  this.filter.addAccelMeasurement(this.accelerometer, timestampS);
+  this.filter.addGyroMeasurement(this.gyroscope, timestampS);
+
+  this.previousTimestampS = timestampS;
+};
+
+LeapMotionPoseSensor.prototype.onScreenOrientationChange_ =
+    function(screenOrientation) {
+  this.setScreenTransform_();
+};
+
+LeapMotionPoseSensor.prototype.setScreenTransform_ = function() {
+  this.worldToScreenQ.set(0, 0, 0, 1);
+  switch (window.orientation) {
+    case 0:
+      break;
+    case 90:
+      this.worldToScreenQ.setFromAxisAngle(new MathUtil.Vector3(0, 0, 1), -Math.PI/2);
+      break;
+    case -90:
+      this.worldToScreenQ.setFromAxisAngle(new MathUtil.Vector3(0, 0, 1), Math.PI/2);
+      break;
+    case 180:
+      // TODO.
+      break;
+  }
+};
+
+module.exports = LeapMotionPoseSensor;
+
+},{"../math-util.js":16,"../touch-panner.js":24,"../util.js":25,"./complementary-filter.js":19,"./pose-predictor.js":22}],22:[function(_dereq_,module,exports){
 /*
  * Copyright 2015 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -5884,7 +6286,7 @@ PosePredictor.prototype.getPrediction = function(currentQ, gyro, timestampS) {
 
 module.exports = PosePredictor;
 
-},{"../math-util.js":16}],22:[function(_dereq_,module,exports){
+},{"../math-util.js":16}],23:[function(_dereq_,module,exports){
 function SensorSample(sample, timestampS) {
   this.set(sample, timestampS);
 };
@@ -5900,7 +6302,7 @@ SensorSample.prototype.copy = function(sensorSample) {
 
 module.exports = SensorSample;
 
-},{}],23:[function(_dereq_,module,exports){
+},{}],24:[function(_dereq_,module,exports){
 /*
  * Copyright 2015 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -5978,7 +6380,7 @@ TouchPanner.prototype.onTouchEnd_ = function(e) {
 
 module.exports = TouchPanner;
 
-},{"./math-util.js":16,"./util.js":24}],24:[function(_dereq_,module,exports){
+},{"./math-util.js":16,"./util.js":25}],25:[function(_dereq_,module,exports){
 /*
  * Copyright 2015 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -5998,7 +6400,7 @@ var objectAssign = _dereq_('object-assign');
 
 var Util = window.Util || {};
 
-Util.MIN_TIMESTEP = 0.001;
+Util.MIN_TIMESTEP = 0.0001;
 Util.MAX_TIMESTEP = 1;
 
 Util.base64 = function(mimeType, base64) {
@@ -6198,7 +6600,7 @@ Util.safariCssSizeWorkaround = function(canvas) {
 
 module.exports = Util;
 
-},{"object-assign":2}],25:[function(_dereq_,module,exports){
+},{"object-assign":2}],26:[function(_dereq_,module,exports){
 /*
  * Copyright 2015 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -6399,7 +6801,7 @@ ViewerSelector.prototype.createButton_ = function(label, onclick) {
 
 module.exports = ViewerSelector;
 
-},{"./device-info.js":9,"./emitter.js":14,"./util.js":24}],26:[function(_dereq_,module,exports){
+},{"./device-info.js":9,"./emitter.js":14,"./util.js":25}],27:[function(_dereq_,module,exports){
 /*
  * Copyright 2015 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -6463,8 +6865,15 @@ function iOSWakeLock() {
   }
 }
 
+function NoWakeLock() {
+  this.request = function () {};
+  this.release = function () {};
+}
 
 function getWakeLock() {
+  if (WebVRConfig.NO_WAKELOCK) {
+    return NoWakeLock;
+  }
   var userAgent = navigator.userAgent || navigator.vendor || window.opera;
   if (userAgent.match(/iPhone/i) || userAgent.match(/iPod/i)) {
     return iOSWakeLock;
@@ -6474,7 +6883,7 @@ function getWakeLock() {
 }
 
 module.exports = getWakeLock();
-},{"./util.js":24}],27:[function(_dereq_,module,exports){
+},{"./util.js":25}],28:[function(_dereq_,module,exports){
 /*
  * Copyright 2015 Google Inc. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
